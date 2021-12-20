@@ -4,18 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
+	"node_hunter/search"
+	"node_hunter/storage"
 	"os"
+	"sync"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
 type NodeRecord struct {
 	Record string `json:"record"`
 }
+
+// 记录所有节点的上次查询时间
+var searchMap = make(map[enode.ID]int64)
+
+// 用于判断是否是新节点
+var seenNode = make(map[enode.ID]bool)
 
 // 读取以太坊官方维护的节点列表
 func ReadNodes() []*enode.Node {
@@ -37,47 +42,68 @@ func ReadNodes() []*enode.Node {
 }
 
 func main() {
-	nodes := ReadNodes()
-	fmt.Println(len(nodes))
-	nodes = nodes[:100]
-	// 构造UDP连接，要使用ListenUDP不能使用DialUDP
-	conn, err := net.ListenUDP("udp4", &net.UDPAddr{
-		IP:   []byte{},
-		Port: 30303,
-	})
-	if err != nil {
-		panic(err)
-	}
+	// dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(dir)
 
-	// 准备enode.DB对象
-	db, err := enode.OpenDB("")
-	if err != nil {
-		panic(err)
-	}
-
-	// 准备节点私钥
-	priv, err := crypto.GenerateKey()
-	if err != nil {
-		panic(err)
-	}
-	ln := enode.NewLocalNode(db, priv)
-
-	logger := log.New()
-	logger.SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.LogfmtFormat())))
-
-	// 启动节点发现协议
-	udpv4, err := discover.ListenV4(conn, ln, discover.Config{
-		PrivateKey: priv,
-		Log:        logger,
-	})
-	if err != nil {
-		panic(err)
-	}
-	// 创建远程节点对象并向其发送Ping包
+	nodes := []*enode.Node{enode.MustParse("enr:-Je4QN9cEF4RMRF8zG_Bng1ZWG5VSH98w0H4U1FIcIRIuOFIMTh_QQeD390aKb0hPibD6__EYhC7b1RZHpO5P5ayEggbg2V0aMfGhOAp6ZGAgmlkgnY0gmlwhMOwtZSJc2VjcDI1NmsxoQP1j8zSY7oyJBL_NyRGa713TTAYt_oAyIdQtZwn5geYhYN0Y3CCdl-DdWRwgnZf")}
+	l := storage.StartLog()
+	udpv4 := search.InitV4()
+	// 标记初始节点
 	for _, node := range nodes {
-		if err := udpv4.Ping(node); err != nil {
-			fmt.Println(err)
-			fmt.Println(node.URLv4())
-		}
+		seenNode[node.ID()] = true
+		l.Nodes <- node.URLv4()
 	}
+
+	// 最多同时查询10个节点
+	token := make(chan struct{}, 10)
+	for i := 0; i < 10; i++ {
+		token <- struct{}{}
+	}
+
+	// 不断循环所有节点进行搜索
+	for i := 0; i < 100; i++ {
+		var wg sync.WaitGroup
+		for _, node := range nodes {
+			<-token
+			fmt.Println("start search:", node.URLv4())
+			wg.Add(1)
+			go func(n *enode.Node) {
+				nodeMap, err := search.RelationNodes(udpv4, n)
+				if err != nil {
+					fmt.Println(err)
+				}
+				// 写入节点关系记录
+				relation := fmt.Sprintf("%s %d", n.URLv4(), len(nodeMap))
+				for _, n := range nodeMap {
+					url := n.URLv4()
+					relation += " " + url
+					// 如果发现了新节点，加入到数组并记录到文件中
+					if !seenNode[n.ID()] {
+						l.Nodes <- url
+						nodes = append(nodes, n)
+						seenNode[n.ID()] = true
+					}
+				}
+				l.Relation <- relation
+				wg.Done()
+				token <- struct{}{}
+			}(node)
+		}
+		wg.Wait()
+	}
+	l.Close()
+	// udpv4.Ping(node)
+	// fmt.Println(node)
+	// node = udpv4.Resolve(node)
+	// fmt.Println(node)
+	// 创建远程节点对象并向其发送Ping包
+	// for _, node := range nodes {
+	// 	if err := udpv4.Ping(node); err != nil {
+	// 		fmt.Println(err)
+	// 		fmt.Println(node.URLv4())
+	// 	}
+	// }
 }
