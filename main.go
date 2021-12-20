@@ -16,10 +16,8 @@ type NodeRecord struct {
 	Record string `json:"record"`
 }
 
-// 记录所有节点的上次查询时间
-var searchMap = make(map[enode.ID]int64)
-
 // 用于判断是否是新节点
+var seenLock sync.RWMutex
 var seenNode = make(map[enode.ID]bool)
 
 // 读取以太坊官方维护的节点列表
@@ -42,11 +40,6 @@ func ReadNodes() []*enode.Node {
 }
 
 func main() {
-	// dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println(dir)
 
 	nodes := []*enode.Node{enode.MustParse("enr:-Je4QN9cEF4RMRF8zG_Bng1ZWG5VSH98w0H4U1FIcIRIuOFIMTh_QQeD390aKb0hPibD6__EYhC7b1RZHpO5P5ayEggbg2V0aMfGhOAp6ZGAgmlkgnY0gmlwhMOwtZSJc2VjcDI1NmsxoQP1j8zSY7oyJBL_NyRGa713TTAYt_oAyIdQtZwn5geYhYN0Y3CCdl-DdWRwgnZf")}
 	l := storage.StartLog()
@@ -81,10 +74,15 @@ func main() {
 					url := n.URLv4()
 					relation += " " + url
 					// 如果发现了新节点，加入到数组并记录到文件中
-					if !seenNode[n.ID()] {
+					seenLock.RLock()
+					seen := seenNode[n.ID()]
+					seenLock.RUnlock()
+					if seen {
 						l.Nodes <- url
 						nodes = append(nodes, n)
+						seenLock.Lock()
 						seenNode[n.ID()] = true
+						seenLock.Unlock()
 					}
 				}
 				l.Relation <- relation
@@ -95,15 +93,4 @@ func main() {
 		wg.Wait()
 	}
 	l.Close()
-	// udpv4.Ping(node)
-	// fmt.Println(node)
-	// node = udpv4.Resolve(node)
-	// fmt.Println(node)
-	// 创建远程节点对象并向其发送Ping包
-	// for _, node := range nodes {
-	// 	if err := udpv4.Ping(node); err != nil {
-	// 		fmt.Println(err)
-	// 		fmt.Println(node.URLv4())
-	// 	}
-	// }
 }
