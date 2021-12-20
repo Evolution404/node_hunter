@@ -8,6 +8,7 @@ import (
 	"node_hunter/storage"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
@@ -16,9 +17,10 @@ type NodeRecord struct {
 	Record string `json:"record"`
 }
 
-// 用于判断是否是新节点
+// 用于判断是否是新节点，并且记录上次查询时间
+// 0表示新发现节点，-1表示还没查询过的节点
 var seenLock sync.RWMutex
-var seenNode = make(map[enode.ID]bool)
+var seenNode = make(map[enode.ID]int64)
 
 // 读取以太坊官方维护的节点列表
 func ReadNodes() []*enode.Node {
@@ -46,7 +48,7 @@ func main() {
 	udpv4 := search.InitV4()
 	// 标记初始节点
 	for _, node := range nodes {
-		seenNode[node.ID()] = true
+		seenNode[node.ID()] = -1
 		l.Nodes <- node.URLv4()
 	}
 
@@ -60,6 +62,13 @@ func main() {
 	for i := 0; i < 100; i++ {
 		var wg sync.WaitGroup
 		for _, node := range nodes {
+			seenLock.RLock()
+			seen := seenNode[node.ID()]
+			seenLock.RUnlock()
+			// 一小时内不重复查询
+			if time.Now().Unix()-seen < 3600 {
+				continue
+			}
 			<-token
 			fmt.Println("start search:", node.URLv4())
 			wg.Add(1)
@@ -68,6 +77,10 @@ func main() {
 				if err != nil {
 					fmt.Println(err)
 				}
+				// 记录查询完成时间
+				seenLock.Lock()
+				seenNode[n.ID()] = time.Now().Unix()
+				seenLock.Unlock()
 				// 写入节点关系记录
 				relation := fmt.Sprintf("%s %d", n.URLv4(), len(nodeMap))
 				for _, n := range nodeMap {
@@ -77,11 +90,11 @@ func main() {
 					seenLock.RLock()
 					seen := seenNode[n.ID()]
 					seenLock.RUnlock()
-					if seen {
+					if seen == 0 {
 						l.Nodes <- url
 						nodes = append(nodes, n)
 						seenLock.Lock()
-						seenNode[n.ID()] = true
+						seenNode[n.ID()] = -1
 						seenLock.Unlock()
 					}
 				}

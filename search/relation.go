@@ -100,6 +100,7 @@ func RelationNodes(udpv4 *discover.UDPv4, initial *enode.Node) (map[enode.ID]*en
 			count = 0
 		}
 		last = len(nodeMap)
+		fmt.Printf("searching: %d, %s\n", len(nodeMap), initial.URLv4())
 	}
 	fmt.Printf("relation: %d, %s\n", len(nodeMap), initial.URLv4())
 	return nodeMap, nil
