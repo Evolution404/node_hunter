@@ -52,8 +52,8 @@ func main() {
 		l.Nodes <- node.URLv4()
 	}
 
-	// 最多同时查询10个节点
-	token := make(chan struct{}, 10)
+	// 最多同时查询100个节点
+	token := make(chan struct{}, 100)
 	for i := 0; i < 10; i++ {
 		token <- struct{}{}
 	}
