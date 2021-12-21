@@ -14,6 +14,48 @@ import (
 var seenLock sync.RWMutex
 var seenNode = make(map[enode.ID]int64)
 
+var rlpxLock sync.RWMutex
+var doRlpxNode = make(map[enode.ID]int64)
+
+func (l *Logger) restoreRlpx() {
+	fmt.Println("loading rlpx records")
+	scanner := bufio.NewScanner(l.rlpx)
+	count := 0
+	for scanner.Scan() {
+		var timestamp int64
+		var url string
+		str := scanner.Text()
+		fmt.Sscanf(str, "%d %s", &timestamp, &url)
+		node := enode.MustParseV4(url)
+		id := node.ID()
+		// 从文件中得到上次请求rlpx的时间
+		doRlpxNode[id] = timestamp
+		count++
+	}
+	if scanner.Err() != nil {
+		panic(scanner.Err())
+	}
+	fmt.Println("rlpx nodes count:", count)
+}
+
+func (l *Logger) ShouldRlpx(node *enode.Node) bool {
+	rlpxLock.RLock()
+	last := doRlpxNode[node.ID()]
+	rlpxLock.RUnlock()
+	now := time.Now().Unix()
+	if now-last > 24*3600 {
+		return true
+	}
+	return false
+}
+
+func (l *Logger) RlpxDone(node *enode.Node) {
+	now := time.Now().Unix()
+	rlpxLock.Lock()
+	doRlpxNode[node.ID()] = now
+	rlpxLock.Unlock()
+}
+
 // 利用保存的文件进行状态恢复
 func (l *Logger) restore() {
 	fmt.Println("loading nodes")
@@ -34,6 +76,7 @@ func (l *Logger) restore() {
 		count++
 	}
 	fmt.Println("nodes count:", count)
+
 	// relation文件单行过长，不能使用scanner读取
 	fmt.Println("loading relations")
 	reader := bufio.NewReader(l.relation)
@@ -48,7 +91,14 @@ func (l *Logger) restore() {
 		var url string
 		fmt.Sscanf(str, "%d %s %d", &timestamp, &url, &relations)
 		node := enode.MustParseV4(url)
-		seenNode[node.ID()] = timestamp
+
+		// 之前查询连接节点失败，重新启动后给次机会
+		if relations == 0 {
+			seenNode[node.ID()] = -1
+		} else {
+			seenNode[node.ID()] = timestamp
+		}
+
 		// 只需要一行的最开始信息，此行剩余内容忽略
 		for isPrefix {
 			_, isPrefix, err = reader.ReadLine()

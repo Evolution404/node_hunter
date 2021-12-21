@@ -76,7 +76,7 @@ func RelationNodes(udpv4 *discover.UDPv4, initial *enode.Node) (map[enode.ID]*en
 	nodeMap := make(map[enode.ID]*enode.Node)
 	last := 0
 	count := 0
-	// 查询出错超过10次停止查询
+	// 查询出错超过3次停止查询
 	errCount := 0
 	for {
 		rs, err := udpv4.FindRandomNode(initial)

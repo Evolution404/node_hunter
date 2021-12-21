@@ -14,6 +14,7 @@ import (
 var BasePath string = GetCurrentAbPath() + "/data"
 var relationPath string = path.Join(BasePath + "/relation")
 var nodesPath string = path.Join(BasePath + "/nodes")
+var rlpxPath string = path.Join(BasePath + "/rlpx")
 
 type Logger struct {
 	// 记录所有节点
@@ -22,6 +23,8 @@ type Logger struct {
 	relation *os.File
 	Nodes    chan string
 	nodes    *os.File
+	Rlpx     chan string
+	rlpx     *os.File
 	wg       sync.WaitGroup
 }
 
@@ -41,6 +44,7 @@ func StartLog(seedNodes []*enode.Node) *Logger {
 	if err != nil {
 		panic(err)
 	}
+
 	l := &Logger{
 		Relation: make(chan string, 10),
 		relation: relation,
@@ -66,12 +70,27 @@ func StartLog(seedNodes []*enode.Node) *Logger {
 	go l.loop()
 	return l
 }
+func StartRlpxLog() *Logger {
+	rlpx, err := createOrOpen(rlpxPath)
+	if err != nil {
+		panic(err)
+	}
+	l := &Logger{
+		Rlpx: make(chan string, 10),
+		rlpx: rlpx,
+	}
+	l.restoreRlpx()
+	l.wg.Add(1)
+	go l.loop()
+	return l
+}
 
 func (l *Logger) loop() {
 	defer l.wg.Done()
 	// 定位到文件末尾，开始记录新内容
 	l.nodes.Seek(0, io.SeekEnd)
 	l.relation.Seek(0, io.SeekEnd)
+	l.rlpx.Seek(0, io.SeekEnd)
 	for {
 		now := time.Now().Unix()
 		select {
@@ -91,12 +110,43 @@ func (l *Logger) loop() {
 			if _, err := l.nodes.WriteString(str); err != nil {
 				panic(err)
 			}
+		case r, ok := <-l.Rlpx:
+			if !ok {
+				return
+			}
+			str := fmt.Sprintf("%d %s\n", now, r)
+			if _, err := l.rlpx.WriteString(str); err != nil {
+				panic(err)
+			}
 		}
 	}
 }
 
 func (l *Logger) Close() error {
-	close(l.Relation)
+	if l.Relation != nil {
+		close(l.Relation)
+	}
+	if l.Rlpx != nil {
+		close(l.Rlpx)
+	}
+	if l.Nodes != nil {
+		close(l.Nodes)
+	}
 	l.wg.Wait()
-	return l.relation.Close()
+	if l.relation != nil {
+		if err := l.relation.Close(); err != nil {
+			return err
+		}
+	}
+	if l.rlpx != nil {
+		if err := l.rlpx.Close(); err != nil {
+			return err
+		}
+	}
+	if l.nodes != nil {
+		if err := l.nodes.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
