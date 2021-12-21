@@ -44,9 +44,9 @@ func (l *Logger) restore() {
 			break
 		}
 		str := string(lineBytes)
-		var timestamp int64
+		var timestamp, relations int64
 		var url string
-		fmt.Sscanf(str, "%d %s", &timestamp, &url)
+		fmt.Sscanf(str, "%d %s %d", &timestamp, &url, &relations)
 		node := enode.MustParseV4(url)
 		seenNode[node.ID()] = timestamp
 		// 只需要一行的最开始信息，此行剩余内容忽略

@@ -42,9 +42,9 @@ func main() {
 
 	udpv4 := search.InitV4()
 
-	// 最多同时查询100个节点
-	token := make(chan struct{}, 100)
-	for i := 0; i < 100; i++ {
+	// 最多同时查询300个节点
+	token := make(chan struct{}, 300)
+	for i := 0; i < 300; i++ {
 		token <- struct{}{}
 	}
 

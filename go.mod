@@ -14,4 +14,4 @@ require (
 	golang.org/x/sys v0.0.0-20210816183151-1e6c022a8912 // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/Evolution404/go-ethereum v1.10.4-0.20211220134331-c8a912dd3a61
+replace github.com/ethereum/go-ethereum => github.com/Evolution404/go-ethereum v0.0.0-20211221060845-79497660d694
