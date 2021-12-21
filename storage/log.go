@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"io"
 	"os"
@@ -8,8 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
+
+var PrivateKey = genPriv()
 
 var date = time.Now().Format("2006-01-02")
 var BasePath string = path.Join(GetCurrentAbPath(), "data")
@@ -19,6 +24,15 @@ var NodesPath string = nodesPath
 var relationPath string = path.Join(BasePath, "relation-"+date)
 var rlpxPath string = path.Join(BasePath, "rlpx-"+date)
 var ENRPath string = path.Join(BasePath, "/enr-"+date)
+
+func genPriv() *ecdsa.PrivateKey {
+	priv, err := crypto.ToECDSA(common.FromHex("51e00445e18afc55f9c76a2640538204940abebc9704823052aac6c7275923db"))
+	// priv, err := crypto.GenerateKey()
+	if err != nil {
+		panic(err)
+	}
+	return priv
+}
 
 type Logger struct {
 	// 记录所有节点

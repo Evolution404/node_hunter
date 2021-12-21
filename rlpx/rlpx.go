@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
@@ -21,11 +20,7 @@ type Query struct {
 }
 
 func NewQuery() *Query {
-	// 生成私钥
-	priv, err := crypto.GenerateKey()
-	if err != nil {
-		panic(err)
-	}
+	priv := storage.PrivateKey
 	// 打开所有节点记录文件
 	f, err := os.Open(storage.NodesPath)
 	if err != nil {

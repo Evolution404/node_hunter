@@ -3,9 +3,9 @@ package search
 import (
 	"fmt"
 	"net"
+	"node_hunter/storage"
 	"os"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -28,10 +28,7 @@ func InitV4() *discover.UDPv4 {
 	}
 
 	// 准备节点私钥
-	priv, err := crypto.GenerateKey()
-	if err != nil {
-		panic(err)
-	}
+	priv := storage.PrivateKey
 	ln := enode.NewLocalNode(db, priv)
 
 	logger := log.New()
