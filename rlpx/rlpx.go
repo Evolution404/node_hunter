@@ -50,6 +50,7 @@ func (q *Query) Query(l *storage.Logger, threads int) {
 		wg.Add(1)
 		<-token
 		go func(n *enode.Node) {
+			defer wg.Done()
 			q.QueryNode(l, n)
 			token <- struct{}{}
 		}(node)

@@ -15,6 +15,8 @@ var seenLock sync.RWMutex
 var seenNode = make(map[enode.ID]int64)
 
 var rlpxLock sync.RWMutex
+
+// 0代表没查询，大于零记录查询完成的时间戳
 var doRlpxNode = make(map[enode.ID]int64)
 
 func (l *Logger) restoreRlpx() {
@@ -42,7 +44,7 @@ func (l *Logger) ShouldRlpx(node *enode.Node) bool {
 	rlpxLock.RLock()
 	last := doRlpxNode[node.ID()]
 	rlpxLock.RUnlock()
-	return last > 0
+	return last <= 0
 }
 
 func (l *Logger) RlpxDone(node *enode.Node) {
