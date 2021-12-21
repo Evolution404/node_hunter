@@ -92,12 +92,7 @@ func (l *Logger) restore() {
 		fmt.Sscanf(str, "%d %s %d", &timestamp, &url, &relations)
 		node := enode.MustParseV4(url)
 
-		// 之前查询连接节点失败，重新启动后给次机会
-		if relations == 0 {
-			seenNode[node.ID()] = -1
-		} else {
-			seenNode[node.ID()] = timestamp
-		}
+		seenNode[node.ID()] = timestamp
 
 		// 只需要一行的最开始信息，此行剩余内容忽略
 		for isPrefix {
@@ -111,20 +106,22 @@ func (l *Logger) restore() {
 	fmt.Println("searched count:", count)
 }
 
-func (l *Logger) AddSeen(n *enode.Node) {
+func (l *Logger) AddSeen(n *enode.Node) bool {
 	id := n.ID()
 	seenLock.RLock()
 	old := seenNode[id]
 	seenLock.RUnlock()
-	// 没见过的节点记录下来
-	if old == 0 {
-		l.Nodes <- n.URLv4()
-		l.AllNodes = append(l.AllNodes, n)
-	}
 	// 更新节点记录为-1，表示观察到了
 	seenLock.Lock()
 	seenNode[id] = -1
 	seenLock.Unlock()
+	// 没见过的节点记录下来
+	if old == 0 {
+		l.Nodes <- n.URLv4()
+		l.AllNodes = append(l.AllNodes, n)
+		return true
+	}
+	return false
 }
 
 func (l *Logger) AddSeens(ns []*enode.Node) {

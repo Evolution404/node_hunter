@@ -13,6 +13,7 @@ import (
 func StartDiscover(nodes []*enode.Node, threads int) {
 	fmt.Printf("start discover: threads=%d\n", threads)
 	l := storage.StartLog(nodes)
+	defer l.Close()
 
 	udpv4 := search.InitV4()
 
@@ -23,7 +24,7 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 	}
 	var wg sync.WaitGroup
 	// 不断循环所有节点进行搜索
-	for i := 0; i < 100; i++ {
+	for {
 		for _, node := range l.AllNodes {
 			// 24小时内不重复查询
 			if time.Now().Unix()-l.Seen(node.ID()) < 24*3600 {
@@ -54,7 +55,6 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 				token <- struct{}{}
 			}(node)
 		}
+		wg.Wait()
 	}
-	wg.Wait()
-	l.Close()
 }
