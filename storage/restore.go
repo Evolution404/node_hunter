@@ -42,11 +42,7 @@ func (l *Logger) ShouldRlpx(node *enode.Node) bool {
 	rlpxLock.RLock()
 	last := doRlpxNode[node.ID()]
 	rlpxLock.RUnlock()
-	now := time.Now().Unix()
-	if now-last > 24*3600 {
-		return true
-	}
-	return false
+	return last > 0
 }
 
 func (l *Logger) RlpxDone(node *enode.Node) {
