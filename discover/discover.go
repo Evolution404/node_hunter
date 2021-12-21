@@ -37,7 +37,7 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 			wg.Add(1)
 			go func(n *enode.Node) {
 				defer wg.Done()
-				nodeMap, err := search.RelationNodes(udpv4, n)
+				nodeMap, err := search.DumpRelation(udpv4, n)
 				if err != nil {
 					fmt.Println(err)
 				}

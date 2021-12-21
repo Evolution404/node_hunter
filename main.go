@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"node_hunter/discover"
+	"node_hunter/enr"
 	"node_hunter/rlpx"
 	"node_hunter/storage"
 
@@ -36,10 +37,20 @@ func (r *RlpxCommand) Execute(args []string) error {
 	return nil
 }
 
+type ENRCommand struct {
+	Threads int `short:"t" long:"threads" default:"30" description:"threads to query node meta data"`
+}
+
+func (e *ENRCommand) Execute(args []string) error {
+	enr.UpdateENR(e.Threads)
+	return nil
+}
+
 // 定义的所有子命令
 type Option struct {
 	Discover DiscoverCommand `command:"disc"`
 	Rlpx     RlpxCommand     `command:"rlpx"`
+	ENR      ENRCommand      `command:"enr"`
 }
 
 func main() {

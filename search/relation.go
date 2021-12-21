@@ -11,30 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
-type node struct {
-	n         enode.Node
-	timestamp int64
-}
-type nodes []node
-
-func (n nodes) Len() int           { return len(n) }
-func (n nodes) Less(i, j int) bool { return n[i].timestamp < n[j].timestamp } // 大顶堆，返回值决定是否交换元素
-func (n nodes) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
-
-func (n *nodes) Push(x interface{}) {
-	*n = append(*n, x.(node))
-}
-
-func (h *nodes) Pop() interface{} {
-	old := *h
-	n := len(old)
-	x := old[n-1]
-	*h = old[0 : n-1]
-	return x
-}
-
-var nodeHeap nodes
-
 func InitV4() *discover.UDPv4 {
 	// 构造UDP连接，要使用ListenUDP不能使用DialUDP
 	conn, err := net.ListenUDP("udp4", &net.UDPAddr{
@@ -72,7 +48,8 @@ func InitV4() *discover.UDPv4 {
 	return udpv4
 }
 
-func RelationNodes(udpv4 *discover.UDPv4, initial *enode.Node) (map[enode.ID]*enode.Node, error) {
+// 利用输入的启动节点和nodes文件中的节点开始探测网络
+func DumpRelation(udpv4 *discover.UDPv4, initial *enode.Node) (map[enode.ID]*enode.Node, error) {
 	nodeMap := make(map[enode.ID]*enode.Node)
 	last := 0
 	count := 0
