@@ -5,7 +5,6 @@ import (
 	"node_hunter/search"
 	"node_hunter/storage"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
@@ -26,8 +25,8 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 	// 不断循环所有节点进行搜索
 	for {
 		for _, node := range l.AllNodes {
-			// 24小时内不重复查询
-			if time.Now().Unix()-l.Seen(node.ID()) < 24*3600 {
+			// 查询过不再查询
+			if l.Seen(node.ID()) > 0 {
 				continue
 			}
 			<-token

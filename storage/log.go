@@ -11,13 +11,14 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
+var date = time.Now().Format("2006-01-02")
 var BasePath string = path.Join(GetCurrentAbPath(), "data")
-var relationPath string = path.Join(BasePath, "relation")
 var nodesPath string = path.Join(BasePath, "nodes")
-var rlpxPath string = path.Join(BasePath, "rlpx")
-
 var NodesPath string = nodesPath
-var ENRPath string = path.Join(BasePath, "/enr-"+time.Now().Format("2006-01-02"))
+
+var relationPath string = path.Join(BasePath, "relation-"+date)
+var rlpxPath string = path.Join(BasePath, "rlpx-"+date)
+var ENRPath string = path.Join(BasePath, "/enr-"+date)
 
 type Logger struct {
 	// 记录所有节点
@@ -58,7 +59,6 @@ func StartLog(seedNodes []*enode.Node) *Logger {
 		Nodes:    make(chan string, 10),
 		nodes:    nodes,
 	}
-	l.wg.Add(1)
 	// 恢复数据
 	l.restore()
 
@@ -74,6 +74,7 @@ func StartLog(seedNodes []*enode.Node) *Logger {
 	}
 
 	fmt.Println(len(seenNode))
+	l.wg.Add(1)
 	go l.loop()
 	return l
 }

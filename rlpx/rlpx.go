@@ -7,7 +7,6 @@ import (
 	"net"
 	"node_hunter/storage"
 	"os"
-	"path"
 	"sync"
 	"time"
 
@@ -28,8 +27,7 @@ func NewQuery() *Query {
 		panic(err)
 	}
 	// 打开所有节点记录文件
-	pwd := path.Join(storage.GetCurrentAbPath(), "data")
-	f, err := os.Open(path.Join(pwd, "nodes"))
+	f, err := os.Open(storage.NodesPath)
 	if err != nil {
 		panic(err)
 	}
