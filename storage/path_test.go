@@ -6,5 +6,5 @@ import (
 )
 
 func TestPath(t *testing.T) {
-	fmt.Println(getCurrentAbPath())
+	fmt.Println(GetCurrentAbPath())
 }
