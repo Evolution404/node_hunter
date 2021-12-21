@@ -24,11 +24,13 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 	var wg sync.WaitGroup
 	// 不断循环所有节点进行搜索
 	for {
+		noNew := true
 		for _, node := range l.AllNodes {
 			// 查询过不再查询
 			if l.Seen(node.ID()) > 0 {
 				continue
 			}
+			noNew = false
 			<-token
 			fmt.Println("start search:", node.URLv4())
 			// 避免重复查询，在开始查询的时候就记录一下时间
@@ -55,5 +57,8 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 			}(node)
 		}
 		wg.Wait()
+		if noNew {
+			break
+		}
 	}
 }
