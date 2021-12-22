@@ -3,7 +3,7 @@ package enr
 import (
 	"bufio"
 	"fmt"
-	"node_hunter/search"
+	"node_hunter/discover"
 	"node_hunter/storage"
 	"sync"
 	"sync/atomic"
@@ -14,7 +14,7 @@ import (
 
 func UpdateENR(threads int) {
 	fmt.Printf("updating enr threads=%d\n", threads)
-	udpv4 := search.InitV4(30304)
+	udpv4 := discover.InitV4(30304)
 	searched := make(map[enode.ID]bool)
 
 	nodesF, err := storage.CreateOrOpen(storage.NodesPath)

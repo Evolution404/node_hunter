@@ -128,6 +128,15 @@ func (l *Logger) AddSeens(ns []*enode.Node) {
 	}
 }
 
+func (l *Logger) AllDone() bool {
+	for _, node := range l.AllNodes {
+		if l.Seen(node.ID()) < 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func (l *Logger) AddFinished(n *enode.Node) {
 	id := n.ID()
 	seenLock.RLock()
