@@ -5,7 +5,8 @@ import (
 	"net"
 	"node_hunter/storage"
 	"os"
-	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -106,35 +107,34 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 	for i := 0; i < threads; i++ {
 		token <- struct{}{}
 	}
-	var wg sync.WaitGroup
+	var running int32 = 0
 	// 不断循环所有节点进行搜索
-	for !l.AllDone() {
-		for {
-			noNew := true
-			for _, node := range l.AllNodes {
-				// 查询过不再查询
-				if l.Seen(node.ID()) > 0 {
-					continue
+	for {
+		for _, node := range l.AllNodes {
+			// 查询过不再查询
+			if l.Seen(node.ID()) > 0 {
+				continue
+			}
+			<-token
+			fmt.Println("start search:", node.URLv4())
+			// 避免重复查询，在开始查询的时候就记录一下时间
+			l.AddFinished(node)
+			atomic.AddInt32(&running, 1)
+			go func(n *enode.Node) {
+				err := DumpRelation(l, udpv4, n)
+				if err != nil {
+					fmt.Println(err)
 				}
-				noNew = false
-				<-token
-				fmt.Println("start search:", node.URLv4())
-				// 避免重复查询，在开始查询的时候就记录一下时间
-				l.AddFinished(node)
-				wg.Add(1)
-				go func(n *enode.Node) {
-					defer wg.Done()
-					err := DumpRelation(l, udpv4, n)
-					if err != nil {
-						fmt.Println(err)
-					}
-					token <- struct{}{}
-				}(node)
-			}
-			if noNew {
-				break
-			}
+				token <- struct{}{}
+				atomic.AddInt32(&running, -1)
+			}(node)
 		}
-		wg.Wait()
+		time.Sleep(time.Second * 3)
+		if atomic.LoadInt32(&running) > 0 {
+			fmt.Printf("all nodes finished, running goroutine=%d\n", atomic.LoadInt32(&running))
+		} else {
+			fmt.Printf("all nodes finished, stop")
+			break
+		}
 	}
 }
