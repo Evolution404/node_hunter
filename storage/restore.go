@@ -56,29 +56,10 @@ func (l *Logger) RlpxDone(node *enode.Node) {
 
 // 利用保存的文件进行状态恢复
 func (l *Logger) restore() {
-	fmt.Println("loading nodes")
-	scanner := bufio.NewScanner(l.nodes)
-	count := 0
-	for scanner.Scan() {
-		var timestamp int64
-		var url string
-		str := scanner.Text()
-		fmt.Sscanf(str, "%d %s", &timestamp, &url)
-		node := enode.MustParseV4(url)
-		id := node.ID()
-		// 恢复节点记录
-		if seenNode[id] == 0 {
-			seenNode[id] = -1
-			l.AllNodes = append(l.AllNodes, node)
-		}
-		count++
-	}
-	fmt.Println("nodes count:", count)
-
 	// relation文件单行过长，不能使用scanner读取
 	fmt.Println("loading relations")
 	reader := bufio.NewReader(l.relation)
-	count = 0
+	count := 0
 	for {
 		lineBytes, isPrefix, err := reader.ReadLine()
 		if err != nil {
@@ -102,6 +83,26 @@ func (l *Logger) restore() {
 		count++
 	}
 	fmt.Println("searched count:", count)
+
+	count = 0
+	fmt.Println("loading nodes")
+	scanner := bufio.NewScanner(l.nodes)
+	for scanner.Scan() {
+		var timestamp int64
+		var url string
+		str := scanner.Text()
+		fmt.Sscanf(str, "%d %s", &timestamp, &url)
+		node := enode.MustParseV4(url)
+		id := node.ID()
+		// 时间戳为0的说明是还没搜索过的节点，加入到等待列表中
+		if seenNode[id] == 0 {
+			seenNode[id] = -1
+			l.waitingNodes = append(l.waitingNodes, node)
+		}
+		count++
+	}
+	fmt.Println("nodes count:", count)
+
 }
 
 func (l *Logger) AddSeen(n *enode.Node) bool {
@@ -109,14 +110,16 @@ func (l *Logger) AddSeen(n *enode.Node) bool {
 	seenLock.RLock()
 	old := seenNode[id]
 	seenLock.RUnlock()
-	// 更新节点记录为-1，表示观察到了
-	seenLock.Lock()
-	seenNode[id] = -1
-	seenLock.Unlock()
 	// 没见过的节点记录下来
 	if old == 0 {
 		l.Nodes <- n.URLv4()
-		l.AllNodes = append(l.AllNodes, n)
+		l.waitingLock.Lock()
+		l.waitingNodes = append(l.waitingNodes, n)
+		l.waitingLock.Unlock()
+		seenLock.Lock()
+		// 更新节点记录为-1，表示观察到了
+		seenNode[id] = -1
+		seenLock.Unlock()
 		return true
 	}
 	return false
@@ -126,15 +129,6 @@ func (l *Logger) AddSeens(ns []*enode.Node) {
 	for _, n := range ns {
 		l.AddSeen(n)
 	}
-}
-
-func (l *Logger) AllDone() bool {
-	for _, node := range l.AllNodes {
-		if l.Seen(node.ID()) < 0 {
-			return false
-		}
-	}
-	return true
 }
 
 func (l *Logger) AddFinished(n *enode.Node) {
@@ -156,6 +150,16 @@ func (l *Logger) AddFinished(n *enode.Node) {
 func (l *Logger) Seen(id enode.ID) int64 {
 	seenLock.RLock()
 	defer seenLock.RUnlock()
-
 	return seenNode[id]
+}
+
+func (l *Logger) GetWaiting() *enode.Node {
+	l.waitingLock.Lock()
+	defer l.waitingLock.Unlock()
+	if len(l.waitingNodes) == 0 {
+		return nil
+	}
+	first := l.waitingNodes[0]
+	l.waitingNodes = l.waitingNodes[1:]
+	return first
 }

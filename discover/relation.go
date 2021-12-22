@@ -110,7 +110,7 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 	var running int32 = 0
 	// 不断循环所有节点进行搜索
 	for {
-		for _, node := range l.AllNodes {
+		for node := l.GetWaiting(); node != nil; node = l.GetWaiting() {
 			// 查询过不再查询
 			if l.Seen(node.ID()) > 0 {
 				continue
@@ -129,11 +129,12 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 				atomic.AddInt32(&running, -1)
 			}(node)
 		}
-		time.Sleep(time.Second * 3)
 		if atomic.LoadInt32(&running) > 0 {
+			fmt.Println("waiting potential new nodes")
+			time.Sleep(time.Second * 3)
 			fmt.Printf("all nodes finished, running goroutine=%d\n", atomic.LoadInt32(&running))
 		} else {
-			fmt.Printf("all nodes finished, stop")
+			fmt.Println("all nodes finished, stop")
 			break
 		}
 	}

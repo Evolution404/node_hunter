@@ -36,14 +36,15 @@ func genPriv() *ecdsa.PrivateKey {
 
 type Logger struct {
 	// 记录所有节点
-	AllNodes []*enode.Node
-	Relation chan string
-	relation *os.File
-	Nodes    chan string
-	nodes    *os.File
-	Rlpx     chan string
-	rlpx     *os.File
-	wg       sync.WaitGroup
+	waitingNodes []*enode.Node
+	waitingLock  sync.Mutex
+	Relation     chan string
+	relation     *os.File
+	Nodes        chan string
+	nodes        *os.File
+	Rlpx         chan string
+	rlpx         *os.File
+	wg           sync.WaitGroup
 }
 
 func createOrOpen(path string) (*os.File, error) {
@@ -81,7 +82,7 @@ func StartLog(seedNodes []*enode.Node) *Logger {
 		for _, seedNode := range seedNodes {
 			if seenNode[seedNode.ID()] == 0 {
 				seenNode[seedNode.ID()] = -1
-				l.AllNodes = append(l.AllNodes, seedNode)
+				l.waitingNodes = append(l.waitingNodes, seedNode)
 				l.Nodes <- seedNode.URLv4()
 			}
 		}
