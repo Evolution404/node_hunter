@@ -16,6 +16,9 @@ import (
 
 var PrivateKey = genPriv()
 
+// 用于初始化各种map的初始大小
+const NodeCount = 800000
+
 var date = time.Now().Format("2006-01-02")
 var BasePath string = path.Join(GetCurrentAbPath(), "data")
 var nodesPath string = path.Join(BasePath, "nodes")

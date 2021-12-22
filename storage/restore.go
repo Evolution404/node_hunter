@@ -12,12 +12,12 @@ import (
 // 用于判断是否是新节点，并且记录上次查询时间
 // 0表示新发现节点，-1表示还没查询过的节点
 var seenLock sync.RWMutex
-var seenNode = make(map[enode.ID]int64)
+var seenNode = make(map[enode.ID]int64, NodeCount)
 
 var rlpxLock sync.RWMutex
 
 // 0代表没查询，大于零记录查询完成的时间戳
-var doRlpxNode = make(map[enode.ID]int64)
+var doRlpxNode = make(map[enode.ID]int64, NodeCount)
 
 func (l *Logger) restoreRlpx() {
 	fmt.Println("loading rlpx records")
