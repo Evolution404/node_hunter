@@ -14,7 +14,7 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 	l := storage.StartLog(nodes)
 	defer l.Close()
 
-	udpv4 := search.InitV4()
+	udpv4 := search.InitV4(30303)
 
 	// 控制同时查询的协程数
 	token := make(chan struct{}, threads)

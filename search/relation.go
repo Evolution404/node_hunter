@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
-func InitV4() *discover.UDPv4 {
+func InitV4(port int) *discover.UDPv4 {
 	// 构造UDP连接，要使用ListenUDP不能使用DialUDP
 	conn, err := net.ListenUDP("udp4", &net.UDPAddr{
 		IP:   []byte{},
-		Port: 30303,
+		Port: port,
 	})
 	if err != nil {
 		panic(err)

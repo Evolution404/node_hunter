@@ -14,7 +14,7 @@ import (
 
 func UpdateENR(threads int) {
 	fmt.Printf("updating enr threads=%d\n", threads)
-	udpv4 := search.InitV4()
+	udpv4 := search.InitV4(30304)
 	searched := make(map[enode.ID]bool)
 
 	nodesF, err := storage.CreateOrOpen(storage.NodesPath)
