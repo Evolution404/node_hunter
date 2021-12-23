@@ -96,6 +96,7 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 		l.RlpxDone(node)
 		return
 	}
+	conn.Close()
 	str := fmt.Sprintf("%s info %s", node.URLv4(), their.Name)
 	caps := their.Caps
 	// 格式化各个子协议
@@ -110,5 +111,4 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 	fmt.Println(str)
 	l.Rlpx <- str
 	l.RlpxDone(node)
-	conn.Close()
 }
