@@ -2,6 +2,7 @@ package discover
 
 import (
 	"fmt"
+	"node_hunter/config"
 	"node_hunter/storage"
 	"sync"
 	"sync/atomic"
@@ -180,6 +181,10 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 	for {
 		// 每秒打印一次当前正在有多少节点被查询
 		for node := l.GetWaiting(); node != nil; node = l.GetWaiting() {
+			// 不查询被拒绝的节点
+			if config.Reject(node) {
+				continue
+			}
 			// 查询过不再查询
 			if l.Seen(node) > 0 {
 				continue

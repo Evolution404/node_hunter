@@ -3,6 +3,7 @@ package enr
 import (
 	"bufio"
 	"fmt"
+	"node_hunter/config"
 	"node_hunter/discover"
 	"node_hunter/storage"
 	"sync"
@@ -59,6 +60,10 @@ func UpdateENR(threads int) {
 			var url string
 			fmt.Sscanf(str, "%d %s", &timestamp, &url)
 			node := enode.MustParseV4(url)
+			// 判断是否要拒绝此节点
+			if config.Reject(node) {
+				return
+			}
 			// 缓存了结果，跳过
 			if searched[node.ID()] {
 				return

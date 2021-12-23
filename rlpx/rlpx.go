@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
+	"node_hunter/config"
 	"node_hunter/storage"
 	"os"
 	"sync"
@@ -47,6 +48,10 @@ func (q *Query) Query(l *storage.Logger, threads int) {
 		str := scanner.Text()
 		fmt.Sscanf(str, "%d %s", &timestamp, &url)
 		node := enode.MustParseV4(url)
+		// 跳过拒绝节点
+		if config.Reject(node) {
+			continue
+		}
 		wg.Add(1)
 		<-token
 		go func(n *enode.Node) {
