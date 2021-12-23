@@ -13,8 +13,8 @@ type NodeRecord struct {
 }
 
 // 读取以太坊官方维护的节点列表
-func ReadNodes() []*enode.Node {
-	f, err := os.Open("nodes.json")
+func ReadNodes(path string) []*enode.Node {
+	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
 	}
