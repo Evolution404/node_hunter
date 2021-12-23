@@ -112,7 +112,7 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 	for {
 		for node := l.GetWaiting(); node != nil; node = l.GetWaiting() {
 			// 查询过不再查询
-			if l.Seen(node.ID()) > 0 {
+			if l.Seen(node) > 0 {
 				continue
 			}
 			<-token

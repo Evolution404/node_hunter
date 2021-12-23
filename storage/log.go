@@ -83,8 +83,8 @@ func StartLog(seedNodes []*enode.Node) *Logger {
 	// 如果种子节点之前没有被保存下来，记录种子节点
 	if seedNodes != nil {
 		for _, seedNode := range seedNodes {
-			if seenNode[seedNode.ID()] == 0 {
-				seenNode[seedNode.ID()] = -1
+			if seenNode[seedNode.URLv4()] == 0 {
+				seenNode[seedNode.URLv4()] = -1
 				l.waitingNodes = append(l.waitingNodes, seedNode)
 				l.Nodes <- seedNode.URLv4()
 			}

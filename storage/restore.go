@@ -12,7 +12,7 @@ import (
 // 用于判断是否是新节点，并且记录上次查询时间
 // 0表示新发现节点，-1表示还没查询过的节点
 var seenLock sync.RWMutex
-var seenNode = make(map[enode.ID]int64, NodeCount)
+var seenNode = make(map[string]int64, NodeCount)
 
 var rlpxLock sync.RWMutex
 
@@ -71,7 +71,7 @@ func (l *Logger) restore() {
 		fmt.Sscanf(str, "%d %s %d", &timestamp, &url, &relations)
 		node := enode.MustParseV4(url)
 
-		seenNode[node.ID()] = timestamp
+		seenNode[node.URLv4()] = timestamp
 
 		// 只需要一行的最开始信息，此行剩余内容忽略
 		for isPrefix {
@@ -93,10 +93,9 @@ func (l *Logger) restore() {
 		str := scanner.Text()
 		fmt.Sscanf(str, "%d %s", &timestamp, &url)
 		node := enode.MustParseV4(url)
-		id := node.ID()
 		// 时间戳为0的说明是还没搜索过的节点，加入到等待列表中
-		if seenNode[id] == 0 {
-			seenNode[id] = -1
+		if seenNode[url] == 0 {
+			seenNode[url] = -1
 			l.waitingNodes = append(l.waitingNodes, node)
 		}
 		count++
@@ -106,9 +105,9 @@ func (l *Logger) restore() {
 }
 
 func (l *Logger) AddSeen(n *enode.Node) bool {
-	id := n.ID()
+	url := n.URLv4()
 	seenLock.RLock()
-	old := seenNode[id]
+	old := seenNode[url]
 	seenLock.RUnlock()
 	// 没见过的节点记录下来
 	if old == 0 {
@@ -118,7 +117,7 @@ func (l *Logger) AddSeen(n *enode.Node) bool {
 		l.waitingLock.Unlock()
 		seenLock.Lock()
 		// 更新节点记录为-1，表示观察到了
-		seenNode[id] = -1
+		seenNode[url] = -1
 		seenLock.Unlock()
 		return true
 	}
@@ -132,9 +131,9 @@ func (l *Logger) AddSeens(ns []*enode.Node) {
 }
 
 func (l *Logger) AddFinished(n *enode.Node) {
-	id := n.ID()
+	url := n.URLv4()
 	seenLock.RLock()
-	old := seenNode[id]
+	old := seenNode[url]
 	seenLock.RUnlock()
 	// 没见过的节点记录下来
 	if old == 0 {
@@ -143,14 +142,14 @@ func (l *Logger) AddFinished(n *enode.Node) {
 	// 更新节点时间是现在
 	now := time.Now().Unix()
 	seenLock.Lock()
-	seenNode[id] = now
+	seenNode[url] = now
 	seenLock.Unlock()
 }
 
-func (l *Logger) Seen(id enode.ID) int64 {
+func (l *Logger) Seen(n *enode.Node) int64 {
 	seenLock.RLock()
 	defer seenLock.RUnlock()
-	return seenNode[id]
+	return seenNode[n.URLv4()]
 }
 
 func (l *Logger) GetWaiting() *enode.Node {
