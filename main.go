@@ -13,7 +13,7 @@ import (
 
 type DiscoverCommand struct {
 	Threads     int      `short:"t" long:"threads" default:"30" description:"threads to execute node discover"`
-	NodeThreads int      `short:"nt" long:"nodethreads" default:"100" description:"threads to execute node discover"`
+	NodeThreads int      `short:"n" long:"nodethreads" default:"100" description:"threads to execute node discover"`
 	SeedNodes   []string `short:"s" long:"seeds" description:"initial seed nodes"`
 }
 
