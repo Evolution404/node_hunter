@@ -2,6 +2,7 @@ package discover
 
 import (
 	"net"
+	"node_hunter/config"
 	"node_hunter/storage"
 	"os"
 	"path"
@@ -28,7 +29,7 @@ func InitV4(port int) *discover.UDPv4 {
 	}
 
 	// 准备节点私钥
-	priv := storage.PrivateKey
+	priv := config.PrivateKey
 	ln := enode.NewLocalNode(db, priv)
 
 	logger := log.New()

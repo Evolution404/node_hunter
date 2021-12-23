@@ -1,7 +1,6 @@
 package enr
 
 import (
-	"bufio"
 	"fmt"
 	"node_hunter/config"
 	"node_hunter/discover"
@@ -16,62 +15,44 @@ import (
 func UpdateENR(threads int) {
 	fmt.Printf("updating enr threads=%d\n", threads)
 	udpv4 := discover.InitV4(30304)
-	searched := make(map[enode.ID]bool, storage.NodeCount)
-
-	nodesF, err := storage.CreateOrOpen(storage.NodesPath)
-	if err != nil {
-		panic(err)
-	}
-	enrF := storage.NewSyncWriter(storage.ENRPath)
-
-	enrRead, err := storage.CreateOrOpen(storage.ENRPath)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("loading searched enr")
-	enrScanner := bufio.NewScanner(enrRead)
-	for enrScanner.Scan() {
-		str := enrScanner.Text()
-		var timestamp int64
-		var url string
-		fmt.Sscanf(str, "%d %s", &timestamp, &url)
-		n := enode.MustParseV4(url)
-		searched[n.ID()] = true
-	}
-	enrRead.Close()
-	fmt.Println("loaded", len(searched))
+	l := storage.StartLog(nil, false)
 
 	token := make(chan struct{}, threads)
 	for i := 0; i < threads; i++ {
 		token <- struct{}{}
 	}
 
-	scanner := bufio.NewScanner(nodesF)
+	// scanner := bufio.NewScanner(nodesF)
 	var count int64
 	var wg sync.WaitGroup
-	for scanner.Scan() {
+	for {
+		node := l.NextNode()
+		// 遍历所有节点到末尾了，结束
+		if node == nil {
+			break
+		}
+		// 拒绝的节点跳过
+		if config.Reject(node) {
+			return
+		}
+		// 查询过的节点跳过
+		if l.HasEnr(node) {
+			continue
+		}
 		wg.Add(1)
 		<-token
-		scanStr := scanner.Text()
-		go func(str string) {
+		go func(n *enode.Node) {
 			defer wg.Done()
 			defer func() { token <- struct{}{} }()
-			var timestamp int64
-			var url string
-			fmt.Sscanf(str, "%d %s", &timestamp, &url)
-			node := enode.MustParseV4(url)
+
 			// 判断是否要拒绝此节点
 			if config.Reject(node) {
 				return
 			}
-			// 缓存了结果，跳过
-			if searched[node.ID()] {
-				return
-			}
-			fmt.Println("requesting", node.URLv4())
-			nn, err := udpv4.RequestENR(node)
+			fmt.Println("requesting", n.URLv4())
+			nn, err := udpv4.RequestENR(n)
 			now := time.Now().Unix()
-			str = fmt.Sprintf("%d %s", now, url)
+			str := fmt.Sprintf("%d %s", now, n.URLv4())
 			if err != nil {
 				str += fmt.Sprintf(" error %s", err.Error())
 			} else {
@@ -79,13 +60,12 @@ func UpdateENR(threads int) {
 				str += fmt.Sprintf(" info %d %s", seq, nn.String())
 			}
 			fmt.Println(str)
-			str += "\n"
-			enrF.Write([]byte(str))
+			l.WriteEnr(n, str)
 			atomic.AddInt64(&count, 1)
 			if atomic.LoadInt64(&count)%1000 == 0 {
 				fmt.Printf("done %d nodes", count)
 			}
-		}(scanStr)
+		}(node)
 	}
 	wg.Wait()
 }

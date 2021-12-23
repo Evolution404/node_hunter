@@ -1,13 +1,11 @@
 package rlpx
 
 import (
-	"bufio"
 	"crypto/ecdsa"
 	"fmt"
 	"net"
 	"node_hunter/config"
 	"node_hunter/storage"
-	"os"
 	"sync"
 	"time"
 
@@ -17,19 +15,12 @@ import (
 
 type Query struct {
 	priv *ecdsa.PrivateKey
-	f    *os.File
 }
 
 func NewQuery() *Query {
-	priv := storage.PrivateKey
-	// 打开所有节点记录文件
-	f, err := os.Open(storage.NodesPath)
-	if err != nil {
-		panic(err)
-	}
+	priv := config.PrivateKey
 	return &Query{
 		priv: priv,
-		f:    f,
 	}
 }
 
@@ -41,13 +32,12 @@ func (q *Query) Query(l *storage.Logger, threads int) {
 	for i := 0; i < threads; i++ {
 		token <- struct{}{}
 	}
-	scanner := bufio.NewScanner(q.f)
-	for scanner.Scan() {
-		var timestamp int64
-		var url string
-		str := scanner.Text()
-		fmt.Sscanf(str, "%d %s", &timestamp, &url)
-		node := enode.MustParseV4(url)
+	for {
+		// 遍历完成，结束循环
+		node := l.NextNode()
+		if node == nil {
+			break
+		}
 		// 跳过拒绝节点
 		if config.Reject(node) {
 			continue
@@ -66,7 +56,7 @@ func (q *Query) Query(l *storage.Logger, threads int) {
 // 查询一个节点的版本，操作系统，支持的协议
 func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 	// 最近查询过rlpx元数据了，跳过查询
-	if !l.ShouldRlpx(node) {
+	if l.HasRlpx(node) {
 		return
 	}
 	endpoint := fmt.Sprintf("%s:%d", node.IP().String(), node.TCP())
@@ -75,8 +65,7 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 	if err != nil {
 		str := fmt.Sprintf("%s error %s", node.URLv4(), err.Error())
 		fmt.Println(str)
-		l.Rlpx <- str
-		l.RlpxDone(node)
+		l.WriteRlpx(node, str)
 		return
 	}
 	t := p2p.NewRLPX(conn, node.Pubkey())
@@ -84,16 +73,14 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 	if err != nil {
 		str := fmt.Sprintf("%s error %s", node.URLv4(), err.Error())
 		fmt.Println(str)
-		l.Rlpx <- str
-		l.RlpxDone(node)
+		l.WriteRlpx(node, str)
 		return
 	}
 	their, err := t.DoProtoHandshake()
 	if err != nil {
 		str := fmt.Sprintf("%s error %s", node.URLv4(), err.Error())
 		fmt.Println(str)
-		l.Rlpx <- str
-		l.RlpxDone(node)
+		l.WriteRlpx(node, str)
 		return
 	}
 	conn.Close()
@@ -109,6 +96,5 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 		str += "," + cap.String()
 	}
 	fmt.Println(str)
-	l.Rlpx <- str
-	l.RlpxDone(node)
+	l.WriteRlpx(node, str)
 }

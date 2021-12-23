@@ -7,7 +7,20 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
+
+var date = time.Now().Format("2006-01-02")
+var BasePath string = path.Join(GetCurrentAbPath(), "data")
+
+var dbPath string = path.Join(BasePath, "storagedb")
+
+var nodesPath string = path.Join(BasePath, "nodes")
+var NodesPath string = nodesPath
+
+var relationPath string = path.Join(BasePath, "relation-"+date)
+var rlpxPath string = path.Join(BasePath, "rlpx-"+date)
+var ENRPath string = path.Join(BasePath, "/enr-"+date)
 
 // 最终方案-全兼容
 func GetCurrentAbPath() string {

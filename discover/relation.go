@@ -25,10 +25,9 @@ type session struct {
 	rtt        time.Duration // 查询这个节点的rtt时间
 	threads    int
 	maxThreads int
-	errCount   int32               // 出现错误的次数，一旦查询成功就归零
-	err        error               // 最后的错误
-	nodes      map[enode.ID]string // 从这个节点查询到的所有节点信息
-	nodesLock  sync.Mutex
+	errCount   int32 // 出现错误的次数，一旦查询成功就归零
+	err        error // 最后的错误
+	nodes      int32 // 这个节点认识的节点个数
 }
 
 func newSession(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node, maxThreads int) *session {
@@ -37,7 +36,7 @@ func newSession(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node, m
 		udpv4:      udpv4,
 		l:          l,
 		rtt:        time.Millisecond * 100,
-		nodes:      make(map[enode.ID]string),
+		nodes:      int32(l.Relations(initial)),
 		maxThreads: maxThreads,
 	}
 }
@@ -73,12 +72,13 @@ func (s *session) doRTT() int {
 				atomic.StoreInt32(&s.errCount, 0)
 				s.err = nil
 			}
-			s.nodesLock.Lock()
 			for _, r := range rs {
-				s.nodes[r.ID()] = r.URLv4()
-				s.l.AddSeen(r)
+				s.l.WriteNode(r)
+				// 新写入了认识节点，增加计数
+				if s.l.WriteRelation(s.initial, r) {
+					atomic.AddInt32(&s.nodes, 1)
+				}
 			}
-			s.nodesLock.Unlock()
 		}()
 	}
 	wg.Wait()
@@ -100,7 +100,7 @@ func (s *session) do() error {
 			case <-done:
 				return
 			case <-time.Tick(time.Second * 5):
-				count := len(s.nodes)
+				count := s.nodes
 				// 节点数超过0，或者报错了才打印
 				if count != 0 || (s.err != nil && s.err.Error() != "RPC timeout") {
 					if s.err != nil {
@@ -119,9 +119,9 @@ func (s *session) do() error {
 		if s.errCount >= 5 {
 			break
 		}
-		lastCount := len(s.nodes)
+		lastCount := s.nodes
 		threads := s.doRTT()
-		newCount := len(s.nodes)
+		newCount := s.nodes
 		if newCount == lastCount {
 			stopCount += threads
 		} else {
@@ -131,7 +131,7 @@ func (s *session) do() error {
 			break
 		}
 	}
-	fmt.Printf("search node done, count=%d %s\n", len(s.nodes), s.initial.URLv4())
+	fmt.Printf("search node done, count=%d %s\n", s.nodes, s.initial.URLv4())
 	close(done)
 	return s.err
 }
@@ -143,23 +143,14 @@ func DumpRelation(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node,
 	err := s.do()
 
 	// 记录查询完成的时间
-	l.AddFinished(initial)
+	l.RelationDone(initial)
 
-	// 写入节点关系记录
-	relation := fmt.Sprintf("%s %d", initial.URLv4(), len(s.nodes))
-	for _, url := range s.nodes {
-		relation += " " + url
-	}
-	if err != nil {
-		relation += fmt.Sprintf(" error %s", err.Error())
-	}
-	l.Relation <- relation
 	return err
 }
 
 func StartDiscover(nodes []*enode.Node, threads int, nodeThreads int) {
 	fmt.Printf("start discover: threads=%d\n", threads)
-	l := storage.StartLog(nodes)
+	l := storage.StartLog(nodes, true)
 	defer l.Close()
 
 	udpv4 := InitV4(30303)
@@ -191,19 +182,16 @@ func StartDiscover(nodes []*enode.Node, threads int, nodeThreads int) {
 			if config.Reject(node) {
 				continue
 			}
-			// 查询过不再查询
-			if l.Seen(node) > 0 {
-				continue
-			}
 			<-token
-			// 避免重复查询，在开始查询的时候就记录一下时间
-			l.AddFinished(node)
+			// 开始查询
+			l.RelationDoing(node)
 			atomic.AddInt32(&running, 1)
 			go func(n *enode.Node) {
 				err := DumpRelation(l, udpv4, n, nodeThreads)
 				if err != nil {
 					fmt.Println("error", n.URLv4(), err)
 				}
+				l.RelationDone(n)
 				token <- struct{}{}
 				atomic.AddInt32(&running, -1)
 			}(node)

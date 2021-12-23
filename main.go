@@ -33,7 +33,7 @@ type RlpxCommand struct {
 
 func (r *RlpxCommand) Execute(args []string) error {
 	q := rlpx.NewQuery()
-	l := storage.StartRlpxLog()
+	l := storage.StartLog(nil, false)
 	q.Query(l, r.Threads)
 	return nil
 }
