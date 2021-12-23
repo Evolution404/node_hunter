@@ -51,6 +51,10 @@ func (s *session) doRTT() int {
 	if threads == 0 || s.err != nil {
 		threads = 1
 	}
+	// 最多100个线程
+	if threads > 100 {
+		threads = 100
+	}
 	s.threads = threads
 
 	var wg sync.WaitGroup
