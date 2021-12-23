@@ -4,6 +4,7 @@ import (
 	"net"
 	"node_hunter/storage"
 	"os"
+	"path"
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
@@ -21,7 +22,7 @@ func InitV4(port int) *discover.UDPv4 {
 	}
 
 	// 准备enode.DB对象
-	db, err := enode.OpenDB("")
+	db, err := enode.OpenDB(path.Join(storage.BasePath, "db"))
 	if err != nil {
 		panic(err)
 	}

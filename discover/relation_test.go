@@ -46,3 +46,15 @@ func TestRelation2(t *testing.T) {
 	fmt.Println(len(rss))
 	v4.Close()
 }
+
+func TestFind(t *testing.T) {
+	node := enode.MustParseV4("enode://8935c9600d925fd46bdf9d1d155ae682c420d75e4546bfd1de4f9cd18c13aab8edd12a1222d34b10113b091f7d95e85e6c985db93086806535a28efd52002109@175.214.58.105:30303")
+	v4 := InitV4(30303)
+	fmt.Println(v4.FindRandomNode(node))
+}
+
+func TestPing(t *testing.T) {
+	node := enode.MustParseV4("enode://8935c9600d925fd46bdf9d1d155ae682c420d75e4546bfd1de4f9cd18c13aab8edd12a1222d34b10113b091f7d95e85e6c985db93086806535a28efd52002109@175.214.58.105:30303")
+	v4 := InitV4(30303)
+	fmt.Println(v4.Ping(node))
+}

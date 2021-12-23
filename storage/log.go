@@ -29,7 +29,7 @@ var rlpxPath string = path.Join(BasePath, "rlpx-"+date)
 var ENRPath string = path.Join(BasePath, "/enr-"+date)
 
 func genPriv() *ecdsa.PrivateKey {
-	priv, err := crypto.ToECDSA(common.FromHex("51e00445e18afc55f9c76a2640538204940abebc9704823052aac6c7275923db"))
+	priv, err := crypto.ToECDSA(common.FromHex("51e33445e18afc55f9c76a2640538204940abebc9704823052aac6c7275923db"))
 	// priv, err := crypto.GenerateKey()
 	if err != nil {
 		panic(err)
