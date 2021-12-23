@@ -12,8 +12,9 @@ import (
 )
 
 type DiscoverCommand struct {
-	Threads   int      `short:"t" long:"threads" default:"30" description:"threads to execute node discover"`
-	SeedNodes []string `short:"s" long:"seeds" description:"initial seed nodes"`
+	Threads     int      `short:"t" long:"threads" default:"30" description:"threads to execute node discover"`
+	NodeThreads int      `short:"nt" long:"nodethreads" default:"100" description:"threads to execute node discover"`
+	SeedNodes   []string `short:"s" long:"seeds" description:"initial seed nodes"`
 }
 
 func (d *DiscoverCommand) Execute(args []string) error {
@@ -22,7 +23,7 @@ func (d *DiscoverCommand) Execute(args []string) error {
 		n := enode.MustParseV4(s)
 		seed = append(seed, n)
 	}
-	discover.StartDiscover(seed, d.Threads)
+	discover.StartDiscover(seed, d.Threads, d.NodeThreads)
 	return nil
 }
 

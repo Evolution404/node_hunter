@@ -19,24 +19,26 @@ var defaultSessionLogInterval = time.Second
 var sessionLogInterval = time.Second
 
 type session struct {
-	initial   *enode.Node // 要查询的节点
-	udpv4     *discover.UDPv4
-	l         *storage.Logger
-	rtt       time.Duration // 查询这个节点的rtt时间
-	threads   int
-	errCount  int32               // 出现错误的次数，一旦查询成功就归零
-	err       error               // 最后的错误
-	nodes     map[enode.ID]string // 从这个节点查询到的所有节点信息
-	nodesLock sync.Mutex
+	initial    *enode.Node // 要查询的节点
+	udpv4      *discover.UDPv4
+	l          *storage.Logger
+	rtt        time.Duration // 查询这个节点的rtt时间
+	threads    int
+	maxThreads int
+	errCount   int32               // 出现错误的次数，一旦查询成功就归零
+	err        error               // 最后的错误
+	nodes      map[enode.ID]string // 从这个节点查询到的所有节点信息
+	nodesLock  sync.Mutex
 }
 
-func newSession(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node) *session {
+func newSession(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node, maxThreads int) *session {
 	return &session{
-		initial: initial,
-		udpv4:   udpv4,
-		l:       l,
-		rtt:     time.Millisecond * 100,
-		nodes:   make(map[enode.ID]string),
+		initial:    initial,
+		udpv4:      udpv4,
+		l:          l,
+		rtt:        time.Millisecond * 100,
+		nodes:      make(map[enode.ID]string),
+		maxThreads: maxThreads,
 	}
 }
 
@@ -52,8 +54,8 @@ func (s *session) doRTT() int {
 		threads = 1
 	}
 	// 最多100个线程
-	if threads > 100 {
-		threads = 100
+	if threads > s.maxThreads {
+		threads = s.maxThreads
 	}
 	s.threads = threads
 
@@ -135,9 +137,9 @@ func (s *session) do() error {
 }
 
 // 查询指定的节点认识的所有节点，并导出到relation文件中
-func DumpRelation(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node) error {
+func DumpRelation(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node, nodeThreads int) error {
 	// 启动与对方节点的会话，并进行查询
-	s := newSession(l, udpv4, initial)
+	s := newSession(l, udpv4, initial, nodeThreads)
 	err := s.do()
 
 	// 记录查询完成的时间
@@ -155,7 +157,7 @@ func DumpRelation(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node)
 	return err
 }
 
-func StartDiscover(nodes []*enode.Node, threads int) {
+func StartDiscover(nodes []*enode.Node, threads int, nodeThreads int) {
 	fmt.Printf("start discover: threads=%d\n", threads)
 	l := storage.StartLog(nodes)
 	defer l.Close()
@@ -198,7 +200,7 @@ func StartDiscover(nodes []*enode.Node, threads int) {
 			l.AddFinished(node)
 			atomic.AddInt32(&running, 1)
 			go func(n *enode.Node) {
-				err := DumpRelation(l, udpv4, n)
+				err := DumpRelation(l, udpv4, n, nodeThreads)
 				if err != nil {
 					fmt.Println("error", n.URLv4(), err)
 				}
