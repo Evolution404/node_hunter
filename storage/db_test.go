@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 func TestWriteNode(t *testing.T) {
@@ -15,7 +17,47 @@ func TestWriteNode(t *testing.T) {
 	fmt.Println(l.HasNode(node))
 }
 
-func TestNodeCount(t *testing.T) {
-	l := StartLog(nil, false)
-	fmt.Println(l.GetNodesCount())
+func TestCheck(t *testing.T) {
+	db, err := leveldb.OpenFile(dbPath, nil)
+	if err != nil {
+		panic(err)
+	}
+	v, _ := db.Get([]byte(nodeCountKey), nil)
+	nodes := bytesToInt64(v)
+	nodesIter := db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
+	count := 0
+	for nodesIter.Next() {
+		count++
+	}
+	fmt.Println("nodes")
+	fmt.Println(nodes == int64(count))
+
+	v, _ = db.Get([]byte(allRelationCount), nil)
+	v2, _ := db.Get([]byte(allRelationCount), nil)
+	relations := bytesToInt64(v)
+	todayRelations := bytesToInt64(v2)
+	relationIter := db.NewIterator(util.BytesPrefix([]byte(relationDataPrefix)), nil)
+	count = 0
+	for relationIter.Next() {
+		count++
+	}
+
+	fmt.Println("relations")
+	// fmt.Println(relations)
+	// fmt.Println(todayRelations)
+	// fmt.Println(count)
+	fmt.Println(relations == todayRelations)
+	fmt.Println(relations == int64(count))
+
+	v, _ = db.Get([]byte(todayRelationDoneCount), nil)
+	done := bytesToInt64(v)
+	doneIter := db.NewIterator(util.BytesPrefix([]byte(todayRelationDonePrefix)), nil)
+	count = 0
+	for doneIter.Next() {
+		count++
+	}
+	fmt.Println("done")
+	fmt.Println(done)
+	fmt.Println(count)
+	fmt.Println(done == int64(count))
 }

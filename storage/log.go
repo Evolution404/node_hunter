@@ -15,6 +15,7 @@ type Logger struct {
 	waitingNodes []*enode.Node
 	waitingLock  sync.Mutex
 	db           *leveldb.DB
+	dbLock       sync.RWMutex
 	nodeIter     iterator.Iterator
 	wg           sync.WaitGroup
 }
@@ -36,7 +37,7 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 	}
 	if load {
 		// 启动rpc服务
-		startServer(l.db)
+		startServer(l)
 
 		// 加载所有节点
 		for {
@@ -56,14 +57,14 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 		}
 	}
 	for _, seed := range seedNodes {
-		if l.WriteNode(seed) {
-			l.waitingNodes = append(l.waitingNodes, seed)
-		}
+		l.WriteNode(seed)
 	}
 	return l
 }
 
 func (l *Logger) Close() error {
-	l.nodeIter.Release()
+	if l.nodeIter != nil {
+		l.nodeIter.Release()
+	}
 	return l.db.Close()
 }

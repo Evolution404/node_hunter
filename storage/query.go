@@ -7,88 +7,60 @@ import (
 	"net/rpc"
 	"os"
 
-	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type Query struct {
-	db *leveldb.DB
+	l *Logger
 }
 
 func (q *Query) NodesCount(args struct{}, rs *int) error {
-	iter := q.db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
-	count := 0
-	for iter.Next() {
-		count++
-	}
-	*rs = count
-	iter.Release()
-	return iter.Error()
+	*rs = q.l.Nodes()
+	return nil
 }
 
 func (q *Query) All(args struct{}, info *DBInfo) error {
-	iter := q.db.NewIterator(nil, nil)
-	for iter.Next() {
-		switch keyType(iter.Key()) {
-		case Node:
-			info.Nodes++
-		case Relation:
-			info.Relations++
-		case RelationDoing:
-			info.RelationDoing++
-		case RelationDone:
-			info.RelationDone++
-		case Rlpx:
-			info.Rlpxs++
-		case ENR:
-			info.Enrs++
-		case Unknown:
-			info.Unknowns++
-		}
+	info.Nodes = q.l.Nodes()
+	info.Relations = q.l.AllRelations()
+
+	// relation的done和doing都只查今天的
+	doingIter := q.l.db.NewIterator(util.BytesPrefix([]byte(todayRelationDoingPrefix)), nil)
+	for doingIter.Next() {
+		info.RelationDoing++
 	}
-	iter.Release()
-	return iter.Error()
+	doingIter.Release()
+	if err := doingIter.Error(); err != nil {
+		return err
+	}
+	info.RelationDone = q.l.TodayRelationDones()
+
+	info.Rlpxs = q.l.AllRlpxs()
+	info.Enrs = q.l.AllEnrs()
+	return nil
 }
 
 func (q *Query) Today(args struct{}, info *DBInfo) error {
-	// 先计算节点记录的条数
-	nodesIter := q.db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
-	for nodesIter.Next() {
-		info.Nodes++
+	info.Nodes = q.l.Nodes()
+	info.Relations = q.l.TodayRelations()
+	doingIter := q.l.db.NewIterator(util.BytesPrefix([]byte(todayRelationDoingPrefix)), nil)
+	for doingIter.Next() {
+		info.RelationDoing++
 	}
-	nodesIter.Release()
-	if err := nodesIter.Error(); err != nil {
+	doingIter.Release()
+	if err := doingIter.Error(); err != nil {
 		return err
 	}
-	// 再计算带有日期前缀的数据条数
-	iter := q.db.NewIterator(util.BytesPrefix([]byte(date)), nil)
-	for iter.Next() {
-		switch keyType(iter.Key()) {
-		case Node:
-			info.Nodes++
-		case Relation:
-			info.Relations++
-		case RelationDoing:
-			info.RelationDoing++
-		case RelationDone:
-			info.RelationDone++
-		case Rlpx:
-			info.Rlpxs++
-		case ENR:
-			info.Enrs++
-		case Unknown:
-			info.Unknowns++
-		}
-	}
-	nodesIter.Release()
-	return iter.Error()
+	info.RelationDone = q.l.TodayRelationDones()
+	info.Rlpxs = q.l.TodayRlpxs()
+	info.Enrs = q.l.TodayEnrs()
+	return nil
 }
 
-func startServer(db *leveldb.DB) {
+func startServer(l *Logger) {
 	os.Remove(rpcPath)
 	// 启动rpc服务
 	query := &Query{
-		db: db,
+		l: l,
 	}
 	rpc.Register(query)
 	rpc.HandleHTTP()
@@ -108,8 +80,8 @@ func NewQueryer() *Queryer {
 	server := false
 	rc, err := rpc.DialHTTP("unix", rpcPath)
 	if err != nil {
-		db := openDB()
-		startServer(db)
+		l := StartLog(nil, false)
+		startServer(l)
 		server = true
 		rc, err = rpc.DialHTTP("unix", rpcPath)
 		if err != nil {
@@ -129,7 +101,6 @@ type DBInfo struct {
 	RelationDone  int
 	Rlpxs         int // rlpx记录条数
 	Enrs          int // enr记录条数
-	Unknowns      int // 未知类型记录条数
 }
 
 func (i DBInfo) String() string {
@@ -138,9 +109,8 @@ func (i DBInfo) String() string {
 	RelationDoing: %d
 	RelationDone: %d
 	Rlpxs: %d
-	ENRs: %d
-	Unknowns: %d`
-	return fmt.Sprintf(str, i.Nodes, i.Relations, i.RelationDoing, i.RelationDone, i.Rlpxs, i.Enrs, i.Unknowns)
+	ENRs: %d`
+	return fmt.Sprintf(str, i.Nodes, i.Relations, i.RelationDoing, i.RelationDone, i.Rlpxs, i.Enrs)
 }
 
 // 查询节点记录条数

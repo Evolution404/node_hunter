@@ -36,7 +36,7 @@ func newSession(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node, m
 		udpv4:      udpv4,
 		l:          l,
 		rtt:        time.Millisecond * 100,
-		nodes:      int32(l.Relations(initial)),
+		nodes:      int32(l.NodeRelations(initial)),
 		maxThreads: maxThreads,
 	}
 }
@@ -141,9 +141,6 @@ func DumpRelation(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node,
 	// 启动与对方节点的会话，并进行查询
 	s := newSession(l, udpv4, initial, nodeThreads)
 	err := s.do()
-
-	// 记录查询完成的时间
-	l.RelationDone(initial)
 
 	return err
 }
