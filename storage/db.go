@@ -121,6 +121,10 @@ func (l *Logger) Relations(from *enode.Node) int {
 	for iter.Next() {
 		count++
 	}
+	iter.Release()
+	if err := iter.Error(); err != nil {
+		panic(err)
+	}
 	return count
 }
 

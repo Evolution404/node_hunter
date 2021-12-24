@@ -62,5 +62,6 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 }
 
 func (l *Logger) Close() error {
+	l.nodeIter.Release()
 	return l.db.Close()
 }

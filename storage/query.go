@@ -22,6 +22,7 @@ func (q *Query) NodesCount(args struct{}, rs *int) error {
 		count++
 	}
 	*rs = count
+	iter.Release()
 	return iter.Error()
 }
 
@@ -45,6 +46,7 @@ func (q *Query) All(args struct{}, info *DBInfo) error {
 			info.Unknowns++
 		}
 	}
+	iter.Release()
 	return iter.Error()
 }
 
@@ -54,6 +56,7 @@ func (q *Query) Today(args struct{}, info *DBInfo) error {
 	for nodesIter.Next() {
 		info.Nodes++
 	}
+	nodesIter.Release()
 	if err := nodesIter.Error(); err != nil {
 		return err
 	}
@@ -77,6 +80,7 @@ func (q *Query) Today(args struct{}, info *DBInfo) error {
 			info.Unknowns++
 		}
 	}
+	nodesIter.Release()
 	return iter.Error()
 }
 
