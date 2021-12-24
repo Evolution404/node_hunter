@@ -54,10 +54,10 @@ func (q *Query) Query(l *storage.Logger, threads int) {
 }
 
 // 查询一个节点的版本，操作系统，支持的协议
-func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
+func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) error {
 	// 最近查询过rlpx元数据了，跳过查询
 	if l.HasRlpx(node) {
-		return
+		return nil
 	}
 	endpoint := fmt.Sprintf("%s:%d", node.IP().String(), node.TCP())
 	fmt.Println("querying", node.URLv4())
@@ -66,7 +66,7 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 		str := fmt.Sprintf("e%s", err.Error())
 		fmt.Println(str)
 		l.WriteRlpx(node, str)
-		return
+		return err
 	}
 	t := p2p.NewRLPX(conn, node.Pubkey())
 	_, err = t.DoEncHandshake(q.priv)
@@ -74,14 +74,14 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 		str := fmt.Sprintf("e%s", err.Error())
 		fmt.Println(str)
 		l.WriteRlpx(node, str)
-		return
+		return err
 	}
 	their, err := t.DoProtoHandshake()
 	if err != nil {
 		str := fmt.Sprintf("e%s", err.Error())
 		fmt.Println(str)
 		l.WriteRlpx(node, str)
-		return
+		return err
 	}
 	conn.Close()
 	str := fmt.Sprintf("i%s ", their.Name)
@@ -97,4 +97,5 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 	}
 	fmt.Println(str)
 	l.WriteRlpx(node, str)
+	return nil
 }

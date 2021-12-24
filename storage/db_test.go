@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
@@ -17,11 +16,31 @@ func TestWriteNode(t *testing.T) {
 	fmt.Println(l.HasNode(node))
 }
 
-func TestCheck(t *testing.T) {
-	db, err := leveldb.OpenFile(dbPath, nil)
-	if err != nil {
-		panic(err)
+func TestShowRE(t *testing.T) {
+	db := openDB()
+	iter := db.NewIterator(util.BytesPrefix([]byte(rlpxPrefix)), nil)
+	for iter.Next() {
+		key := string(iter.Key())
+		val := string(iter.Value())
+		fmt.Println(key, val)
 	}
+	iter = db.NewIterator(util.BytesPrefix([]byte(enrPrefix)), nil)
+	for iter.Next() {
+		key := string(iter.Key())
+		val := string(iter.Value())
+		fmt.Println(key, val)
+	}
+
+	// iter = db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
+	// for iter.Next() {
+	// 	key := string(iter.Key())
+	// 	val := string(iter.Value())
+	// 	fmt.Println(key, val)
+	// }
+}
+
+func TestCheck(t *testing.T) {
+	db := openDB()
 	v, _ := db.Get([]byte(nodeCountKey), nil)
 	nodes := bytesToInt64(v)
 	nodesIter := db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)

@@ -12,20 +12,26 @@ import (
 )
 
 type DiscoverCommand struct {
-	Rlpx        int      `short:"r" long:"rlpx" default:"0" description:"threads to query node meta data"`
-	Enr         int      `short:"e" long:"enr" default:"0" description:"threads to query node enr record"`
+	NoRlpx      bool     `long:"norlpx" default:"false" description:"disable rlpx"`
+	NoEnr       bool     `long:"noenr" default:"false" description:"disable enr"`
+	Remove      bool     `short:"r" long:"remove" default:"false" description:"remove all done sign"`
 	Threads     int      `short:"t" long:"threads" default:"30" description:"threads to execute node discover"`
 	NodeThreads int      `short:"n" long:"nodethreads" default:"10" description:"threads to execute node discover"`
 	SeedNodes   []string `short:"s" long:"seeds" description:"initial seed nodes"`
 }
 
 func (d *DiscoverCommand) Execute(args []string) error {
+	if d.Remove {
+		l := storage.StartLog(nil, false)
+		l.RemoveDone()
+		return nil
+	}
 	var seed []*enode.Node
 	for _, s := range d.SeedNodes {
 		n := enode.MustParseV4(s)
 		seed = append(seed, n)
 	}
-	discover.StartDiscover(seed, d.Threads, d.NodeThreads)
+	discover.StartDiscover(seed, d.Threads, d.NodeThreads, d.NoEnr, d.NoRlpx)
 	return nil
 }
 

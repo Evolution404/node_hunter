@@ -35,10 +35,10 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 	l := &Logger{
 		db: openDB(),
 	}
-	if load {
-		// 启动rpc服务
-		startServer(l)
+	// 启动rpc服务
+	startServer(l)
 
+	if load {
 		// 加载所有节点
 		for {
 			node := l.NextNode()

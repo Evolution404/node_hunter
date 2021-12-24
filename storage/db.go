@@ -3,7 +3,6 @@ package storage
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -376,8 +375,8 @@ func (l *Logger) WriteRlpx(n *enode.Node, info string) bool {
 	batch.Put([]byte(todayRlpxDoneCount), int64ToBytes(int64(count)))
 
 	// 在前方追加时间戳
-	now := time.Now().Unix()
-	info = fmt.Sprintf("%d", now) + info
+	now := int64ToBytes(time.Now().Unix())
+	info = string(now) + info
 
 	batch.Put([]byte(todayRlpxPrefix+n.URLv4()), []byte(info))
 
@@ -432,8 +431,8 @@ func (l *Logger) WriteEnr(n *enode.Node, err error) bool {
 	batch := leveldb.MakeBatch(100)
 	batch.Put([]byte(todayEnrDoneCount), int64ToBytes(int64(count)))
 
-	now := time.Now().Unix()
-	str := fmt.Sprintf("%d", now)
+	now := int64ToBytes(time.Now().Unix())
+	str := string(now)
 	if err != nil {
 		str += "e" + err.Error()
 	} else {
@@ -501,6 +500,22 @@ func (l *Logger) readCount(countKey, prefix string) int {
 		count = int(bytesToInt64(v))
 	}
 	return count
+}
+
+func (l *Logger) RemoveDone() {
+	dones := l.todayRelationDones()
+	iter := l.db.NewIterator(util.BytesPrefix([]byte(relationDonePrefix)), nil)
+	for iter.Next() {
+		key := iter.Key()
+		if bytes.HasPrefix(key, []byte(todayRelationDonePrefix)) {
+			dones--
+		}
+		l.db.Delete(key, nil)
+	}
+	if dones != 0 {
+		panic("wrong done number")
+	}
+	l.db.Delete([]byte(todayRelationDoneCount), nil)
 }
 
 func int64ToBytes(i int64) []byte {

@@ -80,8 +80,7 @@ func NewQueryer() *Queryer {
 	server := false
 	rc, err := rpc.DialHTTP("unix", rpcPath)
 	if err != nil {
-		l := StartLog(nil, false)
-		startServer(l)
+		StartLog(nil, false)
 		server = true
 		rc, err = rpc.DialHTTP("unix", rpcPath)
 		if err != nil {
