@@ -73,7 +73,7 @@ type Option struct {
 	Discover DiscoverCommand `command:"disc"`
 	Rlpx     RlpxCommand     `command:"rlpx"`
 	ENR      ENRCommand      `command:"enr"`
-	Query    QueryCommand    `command:"query"`
+	Query    QueryCommand    `command:"query" alias:"q"`
 }
 
 func main() {
