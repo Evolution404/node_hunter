@@ -118,6 +118,20 @@ func (l *Logger) HasRelation(from *enode.Node, to *enode.Node) bool {
 	return ret
 }
 
+// 查询现在有多少节点记录
+func (l *Logger) Nodes() int {
+	iter := l.db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
+	count := 0
+	for iter.Next() {
+		count++
+	}
+	iter.Release()
+	if err := iter.Error(); err != nil {
+		panic(err)
+	}
+	return count
+}
+
 // 统计某个节点认识的节点个数
 func (l *Logger) Relations(from *enode.Node) int {
 	count := 0
@@ -171,6 +185,20 @@ func (l *Logger) IsRelationDone(from *enode.Node) bool {
 		panic(err)
 	}
 	return ret
+}
+
+// 已经有多少节点查询完成了
+func (l *Logger) RelationDones() int {
+	count := 0
+	iter := l.db.NewIterator(util.BytesPrefix([]byte(todayRelationDonePrefix)), nil)
+	for iter.Next() {
+		count++
+	}
+	iter.Release()
+	if err := iter.Error(); err != nil {
+		panic(err)
+	}
+	return count
 }
 
 func (l *Logger) shouldRelation(url string) bool {

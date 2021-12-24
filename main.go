@@ -12,6 +12,8 @@ import (
 )
 
 type DiscoverCommand struct {
+	Rlpx        int      `short:"r" long:"rlpx" default:"0" description:"threads to query node meta data"`
+	Enr         int      `short:"e" long:"enr" default:"0" description:"threads to query node enr record"`
 	Threads     int      `short:"t" long:"threads" default:"30" description:"threads to execute node discover"`
 	NodeThreads int      `short:"n" long:"nodethreads" default:"10" description:"threads to execute node discover"`
 	SeedNodes   []string `short:"s" long:"seeds" description:"initial seed nodes"`
@@ -39,7 +41,7 @@ func (r *RlpxCommand) Execute(args []string) error {
 }
 
 type ENRCommand struct {
-	Threads int `short:"t" long:"threads" default:"30" description:"threads to query node meta data"`
+	Threads int `short:"t" long:"threads" default:"30" description:"threads to query node enr record"`
 }
 
 func (e *ENRCommand) Execute(args []string) error {
