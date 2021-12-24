@@ -46,7 +46,12 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 			}
 			// 加载还没完成查询的节点
 			if !l.IsRelationDone(node) && !config.Reject(node) {
-				l.waitingNodes = append(l.waitingNodes, node)
+				// 之前没查询完成的放到等待列表的最前面
+				if l.IsRelationDoing(node) {
+					l.waitingNodes = append([]*enode.Node{node}, l.waitingNodes...)
+				} else {
+					l.waitingNodes = append(l.waitingNodes, node)
+				}
 			}
 		}
 	}
