@@ -8,6 +8,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/filter"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
@@ -61,7 +63,10 @@ func keyType(key []byte) KeyType {
 }
 
 func openDB() *leveldb.DB {
-	db, err := leveldb.OpenFile(dbPath, nil)
+	o := &opt.Options{
+		Filter: filter.NewBloomFilter(10),
+	}
+	db, err := leveldb.OpenFile(dbPath, o)
 	if err != nil {
 		panic(err)
 	}
