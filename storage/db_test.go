@@ -14,3 +14,8 @@ func TestWriteNode(t *testing.T) {
 	l.WriteNode(node)
 	fmt.Println(l.HasNode(node))
 }
+
+func TestNodeCount(t *testing.T) {
+	l := StartLog(nil, false)
+	fmt.Println(l.GetNodesCount())
+}

@@ -47,11 +47,33 @@ func (e *ENRCommand) Execute(args []string) error {
 	return nil
 }
 
+type QueryCommand struct {
+	Today bool `short:"t" long:"today" default:"false" description:"show today's data"`
+	All   bool `short:"a" long:"all" default:"false" description:"show all data"`
+	Nodes bool `short:"n" long:"nodes" default:"false" description:"show the number of node records"`
+}
+
+func (q *QueryCommand) Execute(args []string) error {
+	query := storage.NewQueryer()
+	if q.Today {
+		fmt.Println(query.Today())
+	}
+	if q.All {
+		fmt.Println(query.All())
+		query.All()
+	}
+	if q.Nodes {
+		fmt.Println(query.Nodes())
+	}
+	return query.Close()
+}
+
 // 定义的所有子命令
 type Option struct {
 	Discover DiscoverCommand `command:"disc"`
 	Rlpx     RlpxCommand     `command:"rlpx"`
 	ENR      ENRCommand      `command:"enr"`
+	Query    QueryCommand    `command:"query"`
 }
 
 func main() {

@@ -37,6 +37,11 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 	}
 	l.nodeIter = l.db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
 	if load {
+
+		// 启动rpc服务
+		startServer(l.db)
+
+		// 加载所有节点
 		for {
 			node := l.NextNode()
 			if node == nil {

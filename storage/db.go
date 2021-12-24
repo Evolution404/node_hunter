@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"encoding/binary"
 	"time"
 
@@ -10,12 +11,53 @@ import (
 )
 
 var nodesPrefix = "n"
-var relationPrefix = "r" + date
-var rlpxPrefix = "x" + date
-var enrPrefix = "e" + date
+var relationPrefix = "r"
+var rlpxPrefix = "x"
+var enrPrefix = "e"
 
 var doing = "i"
 var done = "d"
+
+var todayRelationPrefix = date + relationPrefix
+var todayRelationDoingPrefix = date + relationPrefix + doing
+var todayRelationDonePrefix = date + relationPrefix + done
+
+var todayRlpxPrefix = date + rlpxPrefix
+var todayEnrPrefix = date + enrPrefix
+
+// 数据库中键的类型
+type KeyType int
+
+const (
+	Node KeyType = iota
+	Relation
+	RelationDoing
+	RelationDone
+	Rlpx
+	ENR
+	Unknown
+)
+
+func keyType(key []byte) KeyType {
+	if bytes.HasPrefix(key, []byte(nodesPrefix)) {
+		return Node
+	}
+	// 去除日期前缀
+	key = key[len(date):]
+	if bytes.HasPrefix(key, []byte(relationPrefix+doing)) {
+		return RelationDoing
+	} else if bytes.HasPrefix(key, []byte(relationPrefix+done)) {
+		return RelationDone
+	} else if bytes.HasPrefix(key, []byte(relationPrefix)) {
+		return Relation
+	} else if bytes.HasPrefix(key, []byte(rlpxPrefix)) {
+		return Rlpx
+	} else if bytes.HasPrefix(key, []byte(enrPrefix)) {
+		return ENR
+	} else {
+		return Unknown
+	}
+}
 
 func openDB() *leveldb.DB {
 	db, err := leveldb.OpenFile(dbPath, nil)
@@ -41,22 +83,18 @@ func (l *Logger) WriteNode(n *enode.Node) bool {
 }
 
 func (l *Logger) HasNode(n *enode.Node) bool {
-	_, err := l.db.Get([]byte(nodesPrefix+n.URLv4()), nil)
+	ret, err := l.db.Has([]byte(nodesPrefix+n.URLv4()), nil)
 	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return false
-		} else {
-			panic(err)
-		}
+		panic(err)
 	}
-	return true
+	return ret
 }
 
 func (l *Logger) WriteRelation(from *enode.Node, to *enode.Node) bool {
 	if l.HasRelation(from, to) {
 		return false
 	}
-	key := relationPrefix + from.URLv4() + to.URLv4()
+	key := todayRelationPrefix + from.URLv4() + to.URLv4()
 	now := time.Now().Unix()
 	err := l.db.Put([]byte(key), int64ToBytes(now), nil)
 	if err != nil {
@@ -66,22 +104,18 @@ func (l *Logger) WriteRelation(from *enode.Node, to *enode.Node) bool {
 }
 
 func (l *Logger) HasRelation(from *enode.Node, to *enode.Node) bool {
-	key := relationPrefix + from.URLv4() + to.URLv4()
-	_, err := l.db.Get([]byte(key), nil)
+	key := todayRelationPrefix + from.URLv4() + to.URLv4()
+	ret, err := l.db.Has([]byte(key), nil)
 	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return false
-		} else {
-			panic(err)
-		}
+		panic(err)
 	}
-	return true
+	return ret
 }
 
 // 统计某个节点认识的节点个数
 func (l *Logger) Relations(from *enode.Node) int {
 	count := 0
-	key := relationPrefix + from.URLv4()
+	key := todayRelationPrefix + from.URLv4()
 	iter := l.db.NewIterator(util.BytesPrefix([]byte(key)), nil)
 	for iter.Next() {
 		count++
@@ -90,7 +124,7 @@ func (l *Logger) Relations(from *enode.Node) int {
 }
 
 func (l *Logger) RelationDoing(from *enode.Node) {
-	key := relationPrefix + doing + from.URLv4()
+	key := todayRelationDoingPrefix + from.URLv4()
 	now := time.Now().Unix()
 	err := l.db.Put([]byte(key), int64ToBytes(now), nil)
 	if err != nil {
@@ -99,21 +133,20 @@ func (l *Logger) RelationDoing(from *enode.Node) {
 }
 
 func (l *Logger) IsRelationDoing(from *enode.Node) bool {
-	key := relationPrefix + doing + from.URLv4()
-	_, err := l.db.Get([]byte(key), nil)
+	key := todayRelationDoingPrefix + from.URLv4()
+	ret, err := l.db.Has([]byte(key), nil)
 	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return false
-		} else {
-			panic(err)
-		}
+		panic(err)
 	}
-	return true
+	return ret
 }
 
 func (l *Logger) RelationDone(from *enode.Node) {
-	l.db.Delete([]byte(relationPrefix+doing+from.URLv4()), nil)
-	key := relationPrefix + done + from.URLv4()
+	// 删除不能失败
+	if err := l.db.Delete([]byte(todayRelationDoingPrefix+from.URLv4()), nil); err != nil {
+		panic(err)
+	}
+	key := todayRelationDonePrefix + from.URLv4()
 	now := time.Now().Unix()
 	err := l.db.Put([]byte(key), int64ToBytes(now), nil)
 	if err != nil {
@@ -122,33 +155,32 @@ func (l *Logger) RelationDone(from *enode.Node) {
 }
 
 func (l *Logger) IsRelationDone(from *enode.Node) bool {
-	key := relationPrefix + "d" + from.URLv4()
-	_, err := l.db.Get([]byte(key), nil)
+	key := todayRelationDonePrefix + from.URLv4()
+	ret, err := l.db.Has([]byte(key), nil)
 	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return false
-		} else {
-			panic(err)
-		}
+		panic(err)
 	}
-	return true
+	return ret
 }
 
 func (l *Logger) shouldRelation(url string) bool {
-	doingKey := relationPrefix + doing + url
-	doneKey := relationPrefix + done + url
-	_, err1 := l.db.Get([]byte(doingKey), nil)
-	_, err2 := l.db.Get([]byte(doneKey), nil)
-	if err1 == leveldb.ErrNotFound && err2 == leveldb.ErrNotFound {
-		return true
-	}
+	doingKey := todayRelationDoingPrefix + url
+	doneKey := todayRelationDonePrefix + url
+	has1, err1 := l.db.Has([]byte(doingKey), nil)
+	has2, err2 := l.db.Has([]byte(doneKey), nil)
+
 	if err1 != nil {
 		panic(err1)
 	}
 	if err2 != nil {
 		panic(err2)
 	}
-	return false
+
+	// 有两者之一都不应该再进行查询
+	if has1 || has2 {
+		return false
+	}
+	return true
 }
 
 func (l *Logger) GetWaiting() *enode.Node {
@@ -174,7 +206,7 @@ func (l *Logger) WriteRlpx(n *enode.Node, info string) bool {
 	if l.HasRlpx(n) {
 		return false
 	}
-	err := l.db.Put([]byte(rlpxPrefix+n.URLv4()), []byte(info), nil)
+	err := l.db.Put([]byte(todayRlpxPrefix+n.URLv4()), []byte(info), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -182,22 +214,18 @@ func (l *Logger) WriteRlpx(n *enode.Node, info string) bool {
 }
 
 func (l *Logger) HasRlpx(n *enode.Node) bool {
-	_, err := l.db.Get([]byte(rlpxPrefix+n.URLv4()), nil)
+	ret, err := l.db.Has([]byte(todayRlpxPrefix+n.URLv4()), nil)
 	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return false
-		} else {
-			panic(err)
-		}
+		panic(err)
 	}
-	return true
+	return ret
 }
 
 func (l *Logger) WriteEnr(n *enode.Node, enr string) bool {
 	if l.HasRlpx(n) {
 		return false
 	}
-	err := l.db.Put([]byte(enrPrefix+n.URLv4()), []byte(enr), nil)
+	err := l.db.Put([]byte(todayEnrPrefix+n.URLv4()), []byte(enr), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -205,15 +233,11 @@ func (l *Logger) WriteEnr(n *enode.Node, enr string) bool {
 }
 
 func (l *Logger) HasEnr(n *enode.Node) bool {
-	_, err := l.db.Get([]byte(enrPrefix+n.URLv4()), nil)
+	ret, err := l.db.Has([]byte(todayEnrPrefix+n.URLv4()), nil)
 	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return false
-		} else {
-			panic(err)
-		}
+		panic(err)
 	}
-	return true
+	return ret
 }
 
 func int64ToBytes(i int64) []byte {

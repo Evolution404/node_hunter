@@ -14,6 +14,7 @@ var date = time.Now().Format("2006-01-02")
 var BasePath string = path.Join(GetCurrentAbPath(), "data")
 
 var dbPath string = path.Join(BasePath, "storagedb")
+var rpcPath string = path.Join(BasePath, "query.ipc")
 
 var nodesPath string = path.Join(BasePath, "nodes")
 var NodesPath string = nodesPath
