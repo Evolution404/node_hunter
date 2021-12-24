@@ -200,7 +200,15 @@ func (l *Logger) GetWaiting() *enode.Node {
 }
 
 func (l *Logger) NextNode() *enode.Node {
+	if l.nodeIter == nil {
+		l.nodeIter = l.db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
+	}
 	if !l.nodeIter.Next() {
+		l.nodeIter.Release()
+		if err := l.nodeIter.Error(); err != nil {
+			panic(err)
+		}
+		l.nodeIter = nil
 		return nil
 	}
 	url := string(l.nodeIter.Key()[len(nodesPrefix):])

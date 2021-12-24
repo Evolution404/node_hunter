@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type Logger struct {
@@ -35,9 +34,7 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 	l := &Logger{
 		db: openDB(),
 	}
-	l.nodeIter = l.db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
 	if load {
-
 		// 启动rpc服务
 		startServer(l.db)
 
