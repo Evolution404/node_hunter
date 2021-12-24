@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -206,6 +207,10 @@ func (l *Logger) WriteRlpx(n *enode.Node, info string) bool {
 	if l.HasRlpx(n) {
 		return false
 	}
+	// 在前方追加时间戳
+	now := time.Now().Unix()
+	info = fmt.Sprintf("%d", now) + info
+
 	err := l.db.Put([]byte(todayRlpxPrefix+n.URLv4()), []byte(info), nil)
 	if err != nil {
 		panic(err)
@@ -221,11 +226,18 @@ func (l *Logger) HasRlpx(n *enode.Node) bool {
 	return ret
 }
 
-func (l *Logger) WriteEnr(n *enode.Node, enr string) bool {
-	if l.HasRlpx(n) {
+func (l *Logger) WriteEnr(n *enode.Node, err error) bool {
+	if l.HasEnr(n) {
 		return false
 	}
-	err := l.db.Put([]byte(todayEnrPrefix+n.URLv4()), []byte(enr), nil)
+	now := time.Now().Unix()
+	str := fmt.Sprintf("%d", now)
+	if err != nil {
+		str += "e" + err.Error()
+	} else {
+		str += "i" + n.String()
+	}
+	err = l.db.Put([]byte(todayEnrPrefix+n.URLv4()), []byte(str), nil)
 	if err != nil {
 		panic(err)
 	}

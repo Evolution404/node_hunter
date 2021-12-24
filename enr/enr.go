@@ -7,7 +7,6 @@ import (
 	"node_hunter/storage"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
@@ -51,8 +50,8 @@ func UpdateENR(threads int) {
 			}
 			fmt.Println("requesting", n.URLv4())
 			nn, err := udpv4.RequestENR(n)
-			now := time.Now().Unix()
-			str := fmt.Sprintf("%d %s", now, n.URLv4())
+			l.WriteEnr(nn, err)
+			str := n.URLv4()
 			if err != nil {
 				str += fmt.Sprintf(" error %s", err.Error())
 			} else {
@@ -60,7 +59,6 @@ func UpdateENR(threads int) {
 				str += fmt.Sprintf(" info %d %s", seq, nn.String())
 			}
 			fmt.Println(str)
-			l.WriteEnr(n, str)
 			atomic.AddInt64(&count, 1)
 			if atomic.LoadInt64(&count)%1000 == 0 {
 				fmt.Printf("done %d nodes", count)

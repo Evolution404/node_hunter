@@ -63,7 +63,7 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 	fmt.Println("querying", node.URLv4())
 	conn, err := net.DialTimeout("tcp4", endpoint, time.Second*3)
 	if err != nil {
-		str := fmt.Sprintf("%s error %s", node.URLv4(), err.Error())
+		str := fmt.Sprintf("e%s", err.Error())
 		fmt.Println(str)
 		l.WriteRlpx(node, str)
 		return
@@ -71,20 +71,20 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) {
 	t := p2p.NewRLPX(conn, node.Pubkey())
 	_, err = t.DoEncHandshake(q.priv)
 	if err != nil {
-		str := fmt.Sprintf("%s error %s", node.URLv4(), err.Error())
+		str := fmt.Sprintf("e%s", err.Error())
 		fmt.Println(str)
 		l.WriteRlpx(node, str)
 		return
 	}
 	their, err := t.DoProtoHandshake()
 	if err != nil {
-		str := fmt.Sprintf("%s error %s", node.URLv4(), err.Error())
+		str := fmt.Sprintf("e%s", err.Error())
 		fmt.Println(str)
 		l.WriteRlpx(node, str)
 		return
 	}
 	conn.Close()
-	str := fmt.Sprintf("%s info %s", node.URLv4(), their.Name)
+	str := fmt.Sprintf("i%s ", their.Name)
 	caps := their.Caps
 	// 格式化各个子协议
 	// 第一项前面有个空格，后面使用逗号分隔
