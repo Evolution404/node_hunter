@@ -59,21 +59,28 @@ func (e *ENRCommand) Execute(args []string) error {
 }
 
 type QueryCommand struct {
-	Today bool `short:"t" long:"today" default:"false" description:"show today's data"`
-	All   bool `short:"a" long:"all" default:"false" description:"show all data"`
-	Nodes bool `short:"n" long:"nodes" default:"false" description:"show the number of node records"`
+	Today      bool `short:"t" long:"today" default:"false" description:"show today's data"`
+	All        bool `short:"a" long:"all" default:"false" description:"show all data"`
+	Nodes      bool `short:"n" long:"nodes" default:"false" description:"show the number of node records"`
+	Active     bool `short:"i" long:"active" default:"false" description:"show the number of active nodes"`
+	ActiveInfo bool `short:"v" long:"activeinfo" default:"false" description:"show the info of active nodes"`
 }
 
 func (q *QueryCommand) Execute(args []string) error {
 	query := query.NewQueryer()
 	if q.Today {
 		fmt.Println(query.Today())
-	}
-	if q.All {
+	} else if q.All {
 		fmt.Println(query.All())
-	}
-	if q.Nodes {
+	} else if q.Nodes {
 		fmt.Println(query.Nodes())
+	} else if q.Active {
+		fmt.Println(query.Active())
+	} else if q.ActiveInfo {
+		actives := query.ActiveInfo()
+		for _, n := range actives.Nodes {
+			fmt.Println(n.Url, n.Number)
+		}
 	}
 	return query.Close()
 }

@@ -18,6 +18,15 @@ type DBInfo struct {
 	Enrs          int // enr记录条数
 }
 
+type ActiveNode struct {
+	Url    string
+	Number int
+}
+
+type Actives struct {
+	Nodes []ActiveNode
+}
+
 func (i DBInfo) String() string {
 	str := `	Nodes: %d
 	Relations: %d
@@ -57,6 +66,17 @@ func (q *Query) Today(args struct{}, info *DBInfo) error {
 	info.RelationDone = q.l.TodayRelationDones()
 	info.Rlpxs = q.l.TodayRlpxs()
 	info.Enrs = q.l.TodayEnrs()
+	return nil
+}
+
+func (q *Query) Active(args struct{}, number *int) error {
+	*number = q.l.TodayActives()
+	return nil
+}
+
+func (q *Query) ActiveInfo(args struct{}, actives *Actives) error {
+	rs := q.l.TodayActivesInfo()
+	*actives = *rs
 	return nil
 }
 

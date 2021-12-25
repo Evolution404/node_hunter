@@ -40,6 +40,8 @@ func TestShowRE(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
+	date = "2021-12-24"
+	updateDate()
 	db := openDB()
 	v, _ := db.Get([]byte(nodeCountKey), nil)
 	nodes := bytesToInt64(v)
@@ -79,4 +81,28 @@ func TestCheck(t *testing.T) {
 	fmt.Println(done)
 	fmt.Println(count)
 	fmt.Println(done == int64(count))
+
+	v, _ = db.Get([]byte(todayEnrDoneCount), nil)
+	enrs := bytesToInt64(v)
+	enrIter := db.NewIterator(util.BytesPrefix([]byte(enrPrefix)), nil)
+	count = 0
+	for enrIter.Next() {
+		count++
+	}
+	fmt.Println("enrs")
+	fmt.Println(enrs)
+	fmt.Println(count)
+	fmt.Println(enrs == int64(count))
+
+	v, _ = db.Get([]byte(todayRlpxDoneCount), nil)
+	rlpxs := bytesToInt64(v)
+	rlpxIter := db.NewIterator(util.BytesPrefix([]byte(rlpxPrefix)), nil)
+	count = 0
+	for rlpxIter.Next() {
+		count++
+	}
+	fmt.Println("rlpxs")
+	fmt.Println(rlpxs)
+	fmt.Println(count)
+	fmt.Println(rlpxs == int64(count))
 }

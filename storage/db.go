@@ -256,6 +256,38 @@ func (l *Logger) NodeRelations(from *enode.Node) int {
 	return l.nodeRelations(from)
 }
 
+func (l *Logger) TodayActives() int {
+	l.dbLock.RLock()
+	defer l.dbLock.RUnlock()
+	iter := l.db.NewIterator(util.BytesPrefix([]byte(todayNodeRelationCount)), nil)
+	count := 0
+	for iter.Next() {
+		count++
+	}
+	iter.Release()
+	if err := iter.Error(); err != nil {
+		panic(err)
+	}
+	return count
+}
+
+func (l *Logger) TodayActivesInfo() *Actives {
+	l.dbLock.RLock()
+	defer l.dbLock.RUnlock()
+	rs := new(Actives)
+	iter := l.db.NewIterator(util.BytesPrefix([]byte(todayNodeRelationCount)), nil)
+	for iter.Next() {
+		url := string(iter.Key()[len(todayNodeRelationCount):])
+		number := bytesToInt64(iter.Value())
+		rs.Nodes = append(rs.Nodes, ActiveNode{url, int(number)})
+	}
+	iter.Release()
+	if err := iter.Error(); err != nil {
+		panic(err)
+	}
+	return rs
+}
+
 // 统计今天总共记录了多少条关系
 func (l *Logger) todayRelations() int {
 	return l.readCount(todayRelationCount, todayRelationPrefix)

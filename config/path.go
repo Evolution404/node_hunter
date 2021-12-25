@@ -40,5 +40,5 @@ func getCurrentAbPathByCaller() string {
 	if ok {
 		abPath = path.Dir(filename)
 	}
-	return abPath[:len(abPath)-8]
+	return abPath[:len(abPath)-7]
 }
