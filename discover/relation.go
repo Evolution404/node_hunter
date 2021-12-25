@@ -251,4 +251,6 @@ func StartDiscover(nodes []*enode.Node, threads int, nodeThreads int, noEnr, noR
 			break
 		}
 	}
+	// 结束后删除今天的日期
+	l.RemoveDate()
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"node_hunter/discover"
 	"node_hunter/enr"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/jessevdk/go-flags"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type DiscoverCommand struct {
@@ -68,12 +70,64 @@ func (q *QueryCommand) Execute(args []string) error {
 	}
 	if q.All {
 		fmt.Println(query.All())
-		query.All()
 	}
 	if q.Nodes {
 		fmt.Println(query.Nodes())
 	}
 	return query.Close()
+}
+
+type DBCommand struct {
+	Read   bool `short:"r" long:"read" default:"false" description:"read key"`
+	Write  bool `short:"w" long:"write" default:"false" description:"write key value"`
+	Delete bool `short:"d" long:"delete" default:"false" description:"delete key"`
+}
+
+func (d *DBCommand) Execute(args []string) error {
+	db := storage.OpenDB()
+	if d.Read {
+		if len(args) != 1 {
+			fmt.Println("wrong key")
+		}
+		key := args[0]
+		v, err := db.Get([]byte(key), nil)
+		if err != nil {
+			if err == leveldb.ErrNotFound {
+				fmt.Println(key, "not found")
+				return nil
+			} else {
+				panic(err)
+			}
+		}
+		if len(v) == 8 {
+			fmt.Println(key, binary.BigEndian.Uint64(v))
+		} else {
+			fmt.Println(key, string(v))
+			fmt.Printf("%s %x\n", key, string(v))
+		}
+	}
+	if d.Write {
+		if len(args) != 2 {
+			fmt.Println("wrong key value")
+			return nil
+		}
+		key := args[0]
+		value := args[1]
+		err := db.Put([]byte(key), []byte(value), nil)
+		if err != nil {
+			panic(err)
+		}
+	}
+	if d.Delete {
+		if len(args) != 1 {
+			fmt.Println("wrong key")
+		}
+		err := db.Delete([]byte(args[0]), nil)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return db.Close()
 }
 
 // 定义的所有子命令
@@ -82,6 +136,7 @@ type Option struct {
 	Rlpx     RlpxCommand     `command:"rlpx"`
 	ENR      ENRCommand      `command:"enr"`
 	Query    QueryCommand    `command:"query" alias:"q"`
+	DB       DBCommand       `command:"db"`
 }
 
 func main() {

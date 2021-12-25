@@ -39,6 +39,8 @@ var todayRelationDonePrefix = relationDonePrefix + date
 var todayRlpxPrefix = rlpxPrefix + date
 var todayEnrPrefix = enrPrefix + date
 
+// 保存正在查询的日期
+var todayKey = metaPrefix + "today"
 var nodeCountKey = metaPrefix + "nodeCount"
 
 // 今天查询到的各个节点的关系个数，需要加上enode链接
@@ -102,6 +104,32 @@ func openDB() *leveldb.DB {
 		panic(err)
 	}
 	return db
+}
+
+func OpenDB() *leveldb.DB {
+	return openDB()
+}
+
+func (l *Logger) queryDate() string {
+	today := time.Now().Format("2006-01-02")
+	v, err := l.db.Get([]byte(todayKey), nil)
+	if err != nil {
+		if err == leveldb.ErrNotFound {
+			l.db.Put([]byte(todayKey), []byte(today), nil)
+			return today
+		} else {
+			panic(err)
+		}
+	}
+	if len(string(v)) == 10 {
+		return string(v)
+	} else {
+		panic("wrong date long")
+	}
+}
+
+func (l *Logger) RemoveDate() {
+	l.db.Delete([]byte(todayKey), nil)
 }
 
 func (l *Logger) WriteNode(n *enode.Node) bool {

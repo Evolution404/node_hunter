@@ -7,10 +7,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 )
 
-var date = time.Now().Format("2006-01-02")
 var BasePath string = path.Join(GetCurrentAbPath(), "data")
 
 var dbPath string = path.Join(BasePath, "storagedb")
