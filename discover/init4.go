@@ -3,7 +3,6 @@ package discover
 import (
 	"net"
 	"node_hunter/config"
-	"node_hunter/storage"
 	"os"
 	"path"
 
@@ -23,7 +22,7 @@ func InitV4(port int) *discover.UDPv4 {
 	}
 
 	// 准备enode.DB对象
-	db, err := enode.OpenDB(path.Join(storage.BasePath, "db"))
+	db, err := enode.OpenDB(path.Join(config.BasePath, "db"))
 	if err != nil {
 		panic(err)
 	}

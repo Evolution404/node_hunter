@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"encoding/binary"
+	"node_hunter/config"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -61,6 +62,19 @@ var allRlpxDoneCount = metaPrefix + "rlpxDoneCount"
 var todayEnrDoneCount = metaPrefix + date + "enrDoneCount"
 var allEnrDoneCount = metaPrefix + "enrDoneCount"
 
+func updateDate() {
+	todayRelationPrefix = relationDataPrefix + date
+	todayRelationDoingPrefix = relationDoingPrefix + date
+	todayRelationDonePrefix = relationDonePrefix + date
+	todayRlpxPrefix = rlpxPrefix + date
+	todayEnrPrefix = enrPrefix + date
+	todayNodeRelationCount = metaPrefix + date + "nodeRelationCount"
+	todayRelationCount = metaPrefix + date + "relationCount"
+	todayRelationDoneCount = metaPrefix + date + "relationDoneCount"
+	todayRlpxDoneCount = metaPrefix + date + "rlpxDoneCount"
+	todayEnrDoneCount = metaPrefix + date + "enrDoneCount"
+}
+
 // 数据库中键的类型
 type KeyType int
 
@@ -99,7 +113,7 @@ func openDB() *leveldb.DB {
 	o := &opt.Options{
 		Filter: filter.NewBloomFilter(10),
 	}
-	db, err := leveldb.OpenFile(dbPath, o)
+	db, err := leveldb.OpenFile(config.DBPath, o)
 	if err != nil {
 		panic(err)
 	}
@@ -330,6 +344,25 @@ func (l *Logger) isRelationDone(from *enode.Node) bool {
 		panic(err)
 	}
 	return ret
+}
+
+// 当前有多少节点正在查询
+func (l *Logger) todayRelationDoings() int {
+	doings := 0
+	doingIter := l.db.NewIterator(util.BytesPrefix([]byte(todayRelationDoingPrefix)), nil)
+	for doingIter.Next() {
+		doings++
+	}
+	doingIter.Release()
+	if err := doingIter.Error(); err != nil {
+		panic(err)
+	}
+	return doings
+}
+func (l *Logger) TodayRelationDoings() int {
+	l.dbLock.RLock()
+	defer l.dbLock.RUnlock()
+	return l.todayRelationDoings()
 }
 
 // 已经有多少节点查询完成了

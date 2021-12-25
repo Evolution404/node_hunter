@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"node_hunter/discover"
 	"node_hunter/enr"
+	"node_hunter/query"
 	"node_hunter/rlpx"
 	"node_hunter/storage"
 
@@ -64,7 +65,7 @@ type QueryCommand struct {
 }
 
 func (q *QueryCommand) Execute(args []string) error {
-	query := storage.NewQueryer()
+	query := query.NewQueryer()
 	if q.Today {
 		fmt.Println(query.Today())
 	}

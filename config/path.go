@@ -1,4 +1,4 @@
-package storage
+package config
 
 import (
 	"log"
@@ -10,16 +10,8 @@ import (
 )
 
 var BasePath string = path.Join(GetCurrentAbPath(), "data")
-
-var dbPath string = path.Join(BasePath, "storagedb")
-var rpcPath string = path.Join(BasePath, "query.ipc")
-
-var nodesPath string = path.Join(BasePath, "nodes")
-var NodesPath string = nodesPath
-
-var relationPath string = path.Join(BasePath, "relation-"+date)
-var rlpxPath string = path.Join(BasePath, "rlpx-"+date)
-var ENRPath string = path.Join(BasePath, "/enr-"+date)
+var RpcPath string = path.Join(BasePath, "query.ipc")
+var DBPath string = path.Join(BasePath, "storagedb")
 
 // 最终方案-全兼容
 func GetCurrentAbPath() string {

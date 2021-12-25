@@ -4,7 +4,6 @@ import (
 	"node_hunter/config"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -14,7 +13,7 @@ import (
 // 运行使用的日期
 // 如果之前的执行完了使用今天
 // 否则继续按照之前的日期查询
-var date string = queryDate()
+var date string = ""
 
 type Logger struct {
 	// 记录所有节点
@@ -33,34 +32,17 @@ func createOrOpen(path string) (*os.File, error) {
 func CreateOrOpen(path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0666)
 }
-func queryDate() string {
-	db := openDB()
-	defer db.Close()
-	today := time.Now().Format("2006-01-02")
-	v, err := db.Get([]byte(todayKey), nil)
-	if err != nil {
-		if err == leveldb.ErrNotFound {
-			db.Put([]byte(todayKey), []byte(today), nil)
-			return today
-		} else {
-			panic(err)
-		}
-	}
-	if len(string(v)) == 10 {
-		return string(v)
-	} else {
-		panic("wrong date long")
-	}
-}
 
 // 输入若干种子节点，作为初始化节点
 // 如果输入nil，说明全部使用data文件夹内记录的节点
 func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 	// 结束后删除今天的日期
-	os.MkdirAll(BasePath, 0777)
+	os.MkdirAll(config.BasePath, 0777)
 	l := &Logger{
 		db: openDB(),
 	}
+	date = l.queryDate()
+	updateDate()
 	// 启动rpc服务
 	startServer(l)
 
