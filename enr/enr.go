@@ -50,7 +50,7 @@ func UpdateENR(threads int) {
 			}
 			fmt.Println("requesting", n.URLv4())
 			nn, err := udpv4.RequestENR(n)
-			l.WriteEnr(nn, err)
+			l.WriteEnr(n, nn, err)
 			str := n.URLv4()
 			if err != nil {
 				str += fmt.Sprintf(" error %s", err.Error())

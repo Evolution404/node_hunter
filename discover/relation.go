@@ -131,12 +131,12 @@ func (s *session) do() error {
 			for i := 0; i < 3; i++ {
 				nn, err := s.udpv4.RequestENR(s.initial)
 				if err == nil {
-					s.l.WriteEnr(nn, err)
+					s.l.WriteEnr(s.initial, nn, err)
 					fmt.Println("enr done:", nn.URLv4(), "seq:", nn.Seq())
 					break
 				}
 				if i == 2 {
-					s.l.WriteEnr(s.initial, err)
+					s.l.WriteEnr(s.initial, nil, err)
 					fmt.Println("error enr:", s.initial.URLv4(), err)
 				}
 			}

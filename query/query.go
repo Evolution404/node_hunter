@@ -48,6 +48,15 @@ func (q *Queryer) Today() storage.DBInfo {
 	return info
 }
 
+func (q *Queryer) All() storage.DBInfo {
+	info := storage.DBInfo{}
+	err := q.r.Call("Query.All", struct{}{}, &info)
+	if err != nil {
+		panic(err)
+	}
+	return info
+}
+
 func (q *Queryer) Active() int {
 	number := 0
 	err := q.r.Call("Query.Active", struct{}{}, &number)
@@ -64,15 +73,6 @@ func (q *Queryer) ActiveInfo() *storage.Actives {
 		panic(err)
 	}
 	return rs
-}
-
-func (q *Queryer) All() storage.DBInfo {
-	info := storage.DBInfo{}
-	err := q.r.Call("Query.All", struct{}{}, &info)
-	if err != nil {
-		panic(err)
-	}
-	return info
 }
 
 func (q *Queryer) Close() error {

@@ -149,6 +149,10 @@ func (l *Logger) RemoveDate() {
 func (l *Logger) WriteNode(n *enode.Node) bool {
 	l.dbLock.Lock()
 	defer l.dbLock.Unlock()
+	return l.writeNode(n)
+}
+
+func (l *Logger) writeNode(n *enode.Node) bool {
 	if l.hasNode(n) {
 		return false
 	}
@@ -462,10 +466,15 @@ func (l *Logger) WriteRlpx(n *enode.Node, info string) bool {
 		return false
 	}
 
+	batch := leveldb.MakeBatch(100)
+
 	count := l.todayRlpxs()
 	count++
-	batch := leveldb.MakeBatch(100)
 	batch.Put([]byte(todayRlpxDoneCount), int64ToBytes(int64(count)))
+
+	count = l.allRlpxs()
+	count++
+	batch.Put([]byte(allRlpxDoneCount), int64ToBytes(int64(count)))
 
 	// 在前方追加时间戳
 	now := int64ToBytes(time.Now().Unix())
@@ -512,26 +521,37 @@ func (l *Logger) AllRlpxs() int {
 	return l.allRlpxs()
 }
 
-func (l *Logger) WriteEnr(n *enode.Node, err error) bool {
+func (l *Logger) WriteEnr(oldNode, newNode *enode.Node, err error) bool {
 	l.dbLock.Lock()
 	defer l.dbLock.Unlock()
-	if l.hasEnr(n) {
+	if l.hasEnr(oldNode) {
 		return false
 	}
+	// 查询到的enr记录如果发生了更新，向数据库中写入最新的记录
+	if newNode != nil && err == nil {
+		if oldNode.URLv4() != newNode.URLv4() {
+			l.writeNode(newNode)
+		}
+	}
+
+	batch := leveldb.MakeBatch(100)
 
 	count := l.todayEnrs()
 	count++
-	batch := leveldb.MakeBatch(100)
 	batch.Put([]byte(todayEnrDoneCount), int64ToBytes(int64(count)))
+
+	count = l.allEnrs()
+	count++
+	batch.Put([]byte(allEnrDoneCount), int64ToBytes(int64(count)))
 
 	now := int64ToBytes(time.Now().Unix())
 	str := string(now)
 	if err != nil {
 		str += "e" + err.Error()
 	} else {
-		str += "i" + n.String()
+		str += "i" + newNode.String()
 	}
-	batch.Put([]byte(todayEnrPrefix+n.URLv4()), []byte(str))
+	batch.Put([]byte(todayEnrPrefix+oldNode.URLv4()), []byte(str))
 	err = l.db.Write(batch, nil)
 	if err != nil {
 		panic(err)
