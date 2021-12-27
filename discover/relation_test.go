@@ -58,3 +58,16 @@ func TestPing(t *testing.T) {
 	v4 := InitV4(30303)
 	fmt.Println(v4.Ping(node))
 }
+
+func TestFindDist(t *testing.T) {
+	node := enode.MustParseV4("enode://f645a111bf38373a17d769bb919aa5e04efa967fa2c291c743d6e3ad9a4a6c5a19d74acdc4ebf89bf278d302208d886954fb28ad324e0e28981ba42b5a20834b@216.62.161.238:30303?discport=30305")
+	v4 := InitV4(30303)
+	rs, err := v4.FindNode(node, node.Pubkey())
+	if err != nil {
+		panic(err)
+	}
+	for _, r := range rs {
+		fmt.Println(r)
+		fmt.Println(enode.LogDist(node.ID(), r.ID()))
+	}
+}

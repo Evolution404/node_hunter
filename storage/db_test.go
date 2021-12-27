@@ -106,3 +106,20 @@ func TestCheck(t *testing.T) {
 	fmt.Println(count)
 	fmt.Println(rlpxs == int64(count))
 }
+
+func TestParseFrom(t *testing.T) {
+	n := enode.MustParseV4("enode://40468e55b635e9513ed4cc54434b34c0f3866c4ac11d7d0827643e9184689a3325c55a00ddc6a8901fadfd018c646192e002544962410cb8ddce8ba6c2b9d350@168.119.18.20:13580?discport=30303")
+	fmt.Println(parseFrom(n))
+}
+
+func TestRelations(t *testing.T) {
+	db := openDB()
+	iter := db.NewIterator(nil, nil)
+	for iter.Next() {
+		if len(iter.Value()) == 8 {
+			fmt.Println(string(iter.Key()), bytesToInt64(iter.Value()))
+		} else {
+			fmt.Println(string(iter.Key()), string(iter.Value()))
+		}
+	}
+}

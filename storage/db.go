@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"node_hunter/config"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -224,7 +225,7 @@ func (l *Logger) WriteRelation(from *enode.Node, to *enode.Node) bool {
 	batch.Put([]byte(allRelationCount), int64ToBytes(int64(count)))
 
 	// 再写入具体的关系记录
-	key := todayRelationPrefix + from.URLv4() + to.URLv4()
+	key := todayRelationPrefix + parseFrom(from) + to.URLv4()
 	now := time.Now().Unix()
 	batch.Put([]byte(key), int64ToBytes(now))
 	err := l.db.Write(batch, nil)
@@ -241,7 +242,7 @@ func (l *Logger) HasRelation(from *enode.Node, to *enode.Node) bool {
 }
 
 func (l *Logger) hasRelation(from *enode.Node, to *enode.Node) bool {
-	key := todayRelationPrefix + from.URLv4() + to.URLv4()
+	key := todayRelationPrefix + parseFrom(from) + to.URLv4()
 	ret, err := l.db.Has([]byte(key), nil)
 	if err != nil {
 		panic(err)
@@ -252,12 +253,21 @@ func (l *Logger) hasRelation(from *enode.Node, to *enode.Node) bool {
 // 统计某个节点认识的节点个数
 func (l *Logger) nodeRelations(from *enode.Node) int {
 	url := from.URLv4()
-	return l.readCount(todayNodeRelationCount+url, todayRelationPrefix+url)
+	return l.readCount(todayNodeRelationCount+url, todayRelationPrefix+parseFrom(from))
 }
 func (l *Logger) NodeRelations(from *enode.Node) int {
 	l.dbLock.RLock()
 	defer l.dbLock.RUnlock()
 	return l.nodeRelations(from)
+}
+
+// 读取到关系条数后将数值写入数据库
+func (l *Logger) NodeRelationsWithWrite(from *enode.Node) int {
+	l.dbLock.Lock()
+	defer l.dbLock.Unlock()
+	count := l.nodeRelations(from)
+	l.db.Put([]byte(todayNodeRelationCount+from.URLv4()), int64ToBytes(int64(count)), nil)
+	return count
 }
 
 func (l *Logger) TodayActives() int {
@@ -344,8 +354,9 @@ func (l *Logger) isRelationDoing(from *enode.Node) bool {
 func (l *Logger) RelationDone(from *enode.Node) {
 	l.dbLock.Lock()
 	defer l.dbLock.Unlock()
+	// tcp端口不同的节点记录会导致Done重复调用，这里跳过
 	if l.isRelationDone(from) {
-		panic("duplicate done")
+		return
 	}
 
 	batch := leveldb.MakeBatch(100)
@@ -629,6 +640,13 @@ func (l *Logger) RemoveDone() {
 		panic("wrong done number")
 	}
 	l.db.Delete([]byte(todayRelationDoneCount), nil)
+}
+
+func parseFrom(n *enode.Node) string {
+	prefix := n.URLv4()[:137]
+	ip := n.IP().String()
+	udp := strconv.Itoa(n.UDP())
+	return prefix + ip + ":" + udp
 }
 
 func int64ToBytes(i int64) []byte {

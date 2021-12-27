@@ -64,7 +64,7 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) error {
 	conn, err := net.DialTimeout("tcp4", endpoint, time.Second*3)
 	if err != nil {
 		str := fmt.Sprintf("e%s", err.Error())
-		fmt.Println(str)
+		fmt.Println("rlpx:", str)
 		l.WriteRlpx(node, str)
 		return err
 	}
@@ -72,14 +72,14 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) error {
 	_, err = t.DoEncHandshake(q.priv)
 	if err != nil {
 		str := fmt.Sprintf("e%s", err.Error())
-		fmt.Println(str)
+		fmt.Println("rlpx:", str)
 		l.WriteRlpx(node, str)
 		return err
 	}
 	their, err := t.DoProtoHandshake()
 	if err != nil {
 		str := fmt.Sprintf("e%s", err.Error())
-		fmt.Println(str)
+		fmt.Println("rlpx:", str)
 		l.WriteRlpx(node, str)
 		return err
 	}
@@ -95,7 +95,7 @@ func (q *Query) QueryNode(l *storage.Logger, node *enode.Node) error {
 	for _, cap := range caps {
 		str += "," + cap.String()
 	}
-	fmt.Println(str)
+	fmt.Println("rlpx:", str)
 	l.WriteRlpx(node, str)
 	return nil
 }

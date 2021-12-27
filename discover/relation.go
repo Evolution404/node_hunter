@@ -40,7 +40,7 @@ func newSession(l *storage.Logger, udpv4 *discover.UDPv4, initial *enode.Node, m
 		udpv4:      udpv4,
 		l:          l,
 		rtt:        time.Millisecond * 100,
-		nodes:      int32(l.NodeRelations(initial)),
+		nodes:      int32(l.NodeRelationsWithWrite(initial)),
 		maxThreads: maxThreads,
 		noEnr:      noEnr,
 		noRlpx:     noRlpx,
@@ -168,10 +168,11 @@ func (s *session) do() error {
 			break
 		}
 		lastCount := s.nodes
-		threads := s.doRTT()
+		s.doRTT()
+		// threads := s.doRTT()
 		newCount := s.nodes
 		if newCount == lastCount {
-			stopCount += threads
+			stopCount++
 		} else {
 			stopCount = 0
 		}
