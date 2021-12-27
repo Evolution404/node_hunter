@@ -46,6 +46,7 @@ var todayKey = metaPrefix + "today"
 var nodeCountKey = metaPrefix + "nodeCount"
 
 // 今天查询到的各个节点的关系个数，需要加上enode链接
+// 这里的enode链接里面只有一个端口指UDP端口，所有tcp端口不同的记录共用一个值
 var todayNodeRelationCount = metaPrefix + date + "nodeRelationCount"
 
 // 今天查询到的所有关系个数
@@ -212,7 +213,7 @@ func (l *Logger) WriteRelation(from *enode.Node, to *enode.Node) bool {
 	count := l.nodeRelations(from)
 	count++
 	batch := leveldb.MakeBatch(100)
-	batch.Put([]byte(todayNodeRelationCount+from.URLv4()), int64ToBytes(int64(count)))
+	batch.Put([]byte(todayNodeRelationCount+parseFrom(from)), int64ToBytes(int64(count)))
 
 	// 自增今天的关系条数
 	count = l.todayRelations()
@@ -252,8 +253,8 @@ func (l *Logger) hasRelation(from *enode.Node, to *enode.Node) bool {
 
 // 统计某个节点认识的节点个数
 func (l *Logger) nodeRelations(from *enode.Node) int {
-	url := from.URLv4()
-	return l.readCount(todayNodeRelationCount+url, todayRelationPrefix+parseFrom(from))
+	url := parseFrom(from)
+	return l.readCount(todayNodeRelationCount+url, todayRelationPrefix+url)
 }
 func (l *Logger) NodeRelations(from *enode.Node) int {
 	l.dbLock.RLock()
@@ -262,13 +263,13 @@ func (l *Logger) NodeRelations(from *enode.Node) int {
 }
 
 // 读取到关系条数后将数值写入数据库
-func (l *Logger) NodeRelationsWithWrite(from *enode.Node) int {
-	l.dbLock.Lock()
-	defer l.dbLock.Unlock()
-	count := l.nodeRelations(from)
-	l.db.Put([]byte(todayNodeRelationCount+from.URLv4()), int64ToBytes(int64(count)), nil)
-	return count
-}
+// func (l *Logger) NodeRelationsWithWrite(from *enode.Node) int {
+// 	l.dbLock.Lock()
+// 	defer l.dbLock.Unlock()
+// 	count := l.nodeRelations(from)
+// 	l.db.Put([]byte(todayNodeRelationCount+from.URLv4()), int64ToBytes(int64(count)), nil)
+// 	return count
+// }
 
 func (l *Logger) TodayActives() int {
 	l.dbLock.RLock()
