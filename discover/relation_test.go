@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	crand "crypto/rand"
+
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
@@ -70,4 +72,12 @@ func TestFindDist(t *testing.T) {
 		fmt.Println(r)
 		fmt.Println(enode.LogDist(node.ID(), r.ID()))
 	}
+}
+
+func TestRand(t *testing.T) {
+	buf := make([]byte, 64)
+	for i := 0; i < 100000; i++ {
+		crand.Read(buf)
+	}
+	fmt.Println(buf)
 }
