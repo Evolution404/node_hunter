@@ -450,6 +450,8 @@ func (l *Logger) GetWaiting() *enode.Node {
 		return nil
 	}
 	first := l.waitingNodes[0]
+	// 置空，避免一直不能被垃圾回收
+	l.waitingNodes[0] = nil
 	l.waitingNodes = l.waitingNodes[1:]
 	return first
 }

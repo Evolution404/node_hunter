@@ -47,6 +47,7 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 	startServer(l)
 
 	if load {
+		l.waitingNodes = make([]*enode.Node, 0, 500000)
 		// 加载所有节点
 		for {
 			node := l.NextNode()
