@@ -1,13 +1,16 @@
 package storage
 
 import (
+	"fmt"
 	"node_hunter/config"
 	"os"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/redmask-hb/GoSimplePrint/goPrint"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 // 运行使用的日期
@@ -47,13 +50,24 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 	startServer(l)
 
 	if load {
+
 		l.waitingNodes = make([]*enode.Node, 0, 500000)
+		// 数据库中保存的节点记录总数
+		nodes := l.Nodes()
+
+		// 生成进度条
+		i := 0
+		bar := goPrint.NewBar(nodes)
+		bar.SetNotice("loading nodes")
+
+		iter := l.db.NewIterator(util.BytesPrefix([]byte(nodesPrefix)), nil)
 		// 加载所有节点
-		for {
-			node := l.NextNode()
-			if node == nil {
-				break
+		for iter.Next() {
+			if i%1000 == 0 {
+				bar.PrintBar(i)
 			}
+			url := string(iter.Key()[len(nodesPrefix):])
+			node := enode.MustParseV4(url)
 			// 加载还没完成查询的节点
 			if !l.IsRelationDone(node) && !config.Reject(node) {
 				// 之前没查询完成的放到等待列表的最前面
@@ -63,7 +77,13 @@ func StartLog(seedNodes []*enode.Node, load bool) *Logger {
 					l.waitingNodes = append(l.waitingNodes, node)
 				}
 			}
+			i++
 		}
+		if err := iter.Error(); err != nil {
+			panic(err)
+		}
+		bar.PrintBar(nodes)
+		fmt.Println()
 	}
 	for _, seed := range seedNodes {
 		l.WriteNode(seed)

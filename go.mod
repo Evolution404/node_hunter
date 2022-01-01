@@ -3,9 +3,9 @@ module node_hunter
 go 1.17
 
 require (
-	github.com/btcsuite/goleveldb v0.0.0-20160330041536-7834afc9e8cd
 	github.com/ethereum/go-ethereum v1.10.13
 	github.com/jessevdk/go-flags v0.0.0-20141203071132-1679536dcc89
+	github.com/redmask-hb/GoSimplePrint v0.0.0-20210302075413-3a3af92bcb7d
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 )
 
